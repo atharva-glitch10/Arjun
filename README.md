@@ -6,6 +6,9 @@ into a calm, non-clinical note for the family, with the elder's consent as a har
 See [`prd.md`](./prd.md) for the product spec and [`CLAUDE.md`](./CLAUDE.md) for the rules this
 codebase is built to.
 
+**Picking this up cold? Start with [`HANDOFF.md`](./HANDOFF.md)** — current state, the decisions
+that look arbitrary but aren't, and the TODO list.
+
 ## The one loop
 
 ```
