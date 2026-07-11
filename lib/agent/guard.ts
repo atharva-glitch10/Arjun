@@ -29,6 +29,11 @@ const SUBSTITUTIONS: [RegExp, string][] = [
   [/\bprognosis\b/gi, "outlook"],
   [/\bcomorbid(ity|ities)?\b/gi, "other things going on"],
   [/\bsuicidal ideation\b/gi, "talk of not wanting to go on"],
+  [/\b(withdrawn|apathetic)\b/gi, "quiet"],
+  [/\blethargic\b/gi, "tired"],
+  [/\bisolated\b/gi, "missing company"],
+  [/\b(hallucinat(ing|ions?)|delusion(al|s)?)\b/gi, "confused"],
+  [/\bparanoid\b/gi, "worried"],
 ];
 
 /** True if the text still reads clinically. Used by tests and by scrubClinical's warning. */

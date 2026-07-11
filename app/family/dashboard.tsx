@@ -122,11 +122,15 @@ function SharingPaused({ name, viewerRole }: { name: string; viewerRole: Role })
 
 function Empty({ name }: { name: string }) {
   return (
-    <section className="animate-rise rounded-3xl bg-white p-8 text-center shadow-sm ring-1 ring-sand-200">
-      <h2 className="text-2xl font-semibold text-ink-900">Nothing yet</h2>
+    <section className="animate-rise flex flex-col items-center justify-center rounded-3xl bg-white/60 px-8 py-16 text-center shadow-sm ring-1 ring-sand-200 backdrop-blur">
+      <div className="relative mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-sand-100">
+        <div className="absolute h-full w-full animate-ping rounded-full bg-sage-400/20" style={{ animationDuration: "3s" }} />
+        <div className="h-4 w-4 rounded-full bg-sage-500" />
+      </div>
+      <h2 className="text-2xl font-semibold text-ink-900">Waiting for their first session</h2>
       <p className="mx-auto mt-3 max-w-md text-lg leading-relaxed text-ink-700">
-        Once {name} has a conversation with Arjun, their note will appear here — and this page
-        will update on its own.
+        Once {name} finishes a conversation with Arjun, a summary and mood signals will appear here.
+        This page updates automatically.
       </p>
     </section>
   );

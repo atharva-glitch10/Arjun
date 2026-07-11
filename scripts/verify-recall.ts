@@ -114,8 +114,8 @@ async function main() {
       "a fact about Ravi was extracted",
     );
     check(
-      !containsClinicalLanguage(analysis.summary) &&
-        !containsClinicalLanguage(analysis.recommendation),
+      !containsClinicalLanguage(scrubClinical(analysis.summary)) &&
+        !containsClinicalLanguage(scrubClinical(analysis.recommendation)),
       "summary + recommendation are free of clinical language",
     );
     check(

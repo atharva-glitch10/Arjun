@@ -77,6 +77,26 @@ export async function analyzeConversation(
   transcript: ChatMessage[],
   existingFactKeys: string[],
 ): Promise<ConversationAnalysis> {
+  const userWords = transcript
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join(" ")
+    .trim();
+
+  // If the user said fewer than 3 words (e.g. just "I'm done" or "hello"), 
+  // do not invoke the LLM to hallucinate a mood or summary.
+  if (userWords.split(/\s+/).length <= 3 && userWords.length < 20) {
+    return {
+      facts: [],
+      summary: "A very brief session. No significant topics were discussed.",
+      mood: "neutral",
+      energy: 50,
+      loneliness: 50,
+      concern: 50,
+      recommendation: "Nothing specific to recommend today; perhaps just a quick hello later.",
+    };
+  }
+
   const result = await structured({
     schemaName: "conversation_analysis",
     jsonSchema: ANALYSIS_JSON_SCHEMA as unknown as Record<string, unknown>,
