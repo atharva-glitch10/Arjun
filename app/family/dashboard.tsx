@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/actions";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { elderChannel, SESSION_ENDED } from "@/lib/realtime";
@@ -18,25 +18,49 @@ export default function Dashboard({
   viewerRole: Role;
 }) {
   const [snap, setSnap] = useState(initial);
-  const [justUpdated, setJustUpdated] = useState(false);
+
+  /**
+   * A new note must never appear under someone's eyes while they're mid-sentence.
+   *
+   * When a conversation ends we hold the new snapshot HERE, show a quiet banner, and let the
+   * reader decide when to take it. Silently swapping the summary a daughter is reading —
+   * about her mother — is the difference between a note from someone who cares and a
+   * surveillance feed that refreshes itself. We are building the first one.
+   */
+  const [pending, setPending] = useState<FamilySnapshot | null>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   const refetch = useCallback(async () => {
     try {
       const res = await fetch("/api/family/snapshot", { cache: "no-store" });
       if (!res.ok) return;
       const next: FamilySnapshot = await res.json();
+
       setSnap((prev) => {
         const changed = next.latest?.at !== prev.latest?.at;
-        if (changed) {
-          setJustUpdated(true);
-          setTimeout(() => setJustUpdated(false), 4000);
+
+        // Nothing on screen to disturb yet (first ever note, or sharing state flipped):
+        // apply it straight away — there is no reading being interrupted.
+        if (!changed || !prev.latest) {
+          setPending(null);
+          return next;
         }
-        return next;
+
+        setPending(next);
+        return prev; // hold. The reader is mid-note.
       });
     } catch {
       // Offline for a moment; the poll will try again.
     }
   }, []);
+
+  function acceptUpdate() {
+    if (!pending) return;
+    setSnap(pending);
+    setPending(null);
+    // Send the reader to the thing that changed, rather than making them hunt for it.
+    requestAnimationFrame(() => headingRef.current?.focus());
+  }
 
   useEffect(() => {
     // Live path: the server pings this channel when a conversation ends. The ping carries no
@@ -63,39 +87,31 @@ export default function Dashboard({
       <header className="border-b border-sand-200 bg-sand-100/70 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-4">
           <div>
-            <p className="text-sm font-medium uppercase tracking-widest text-clay-600">
-              Arjun
-            </p>
-            <h1 className="text-xl font-semibold text-ink-900">{name}</h1>
+            <p className="text-d-eyebrow font-medium uppercase text-clay-700">Arjun</p>
+            <h1 className="text-d-title font-semibold text-ink-900">{name}</h1>
           </div>
           <div className="flex items-center gap-4">
-            <span
-              className={`flex items-center gap-2 text-sm transition ${
-                justUpdated ? "text-sage-600" : "text-ink-500"
-              }`}
-            >
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  justUpdated ? "bg-sage-600" : "bg-ink-500/40"
-                }`}
-              />
-              {justUpdated ? "Just updated" : "Live"}
+            <span className="flex items-center gap-2 text-d-meta text-ink-500">
+              <span className="h-2 w-2 rounded-full bg-sage-600" aria-hidden="true" />
+              Live
             </span>
             <form action={signOut}>
-              <button className="text-base text-ink-500 hover:text-ink-900">Sign out</button>
+              <button className="text-d-body text-ink-700 hover:text-ink-900">Sign out</button>
             </form>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl space-y-6 px-5 py-8">
+        {pending && <NewNoteBanner onRead={acceptUpdate} name={name} />}
+
         {!snap.sharing ? (
           <SharingPaused name={name} viewerRole={viewerRole} />
         ) : !snap.latest ? (
           <Empty name={name} />
         ) : (
           <>
-            <TodayCard snap={snap} name={name} />
+            <TodayCard snap={snap} name={name} headingRef={headingRef} />
             <RecommendationCard text={snap.latest.recommendation} name={name} />
             <SignalsCard snap={snap} />
             {snap.trend.length > 1 && <TrendCard trend={snap.trend} />}
@@ -107,11 +123,38 @@ export default function Dashboard({
   );
 }
 
+/**
+ * The arrival. Announced politely (never "assertive" — this is not an emergency, and a rude
+ * live region that interrupts a screen reader mid-sentence would be exactly the "surveillance
+ * feed" posture we're designing against). The reader takes the update when they're ready.
+ */
+function NewNoteBanner({ onRead, name }: { onRead: () => void; name: string }) {
+  return (
+    <div
+      aria-live="polite"
+      className="animate-arrive flex flex-wrap items-center justify-between gap-3 rounded-card bg-sage-100 px-6 py-4 ring-1 ring-sage-600/25"
+    >
+      <p className="text-d-body text-sage-800">
+        {`${name} just finished a conversation. There’s a new note.`}
+      </p>
+      <button
+        onClick={onRead}
+        className="rounded-control bg-sage-800 px-5 py-2 text-d-body font-medium text-white transition-colors duration-[--duration-hover] hover:bg-ink-900"
+      >
+        Read it
+      </button>
+    </div>
+  );
+}
+
 function SharingPaused({ name, viewerRole }: { name: string; viewerRole: Role }) {
   return (
-    <section className="animate-rise rounded-3xl bg-white p-8 text-center shadow-sm ring-1 ring-sand-200">
-      <h2 className="text-2xl font-semibold text-ink-900">Sharing is paused</h2>
-      <p className="mx-auto mt-3 max-w-md text-lg leading-relaxed text-ink-700">
+    /* Graceful, never accusatory. The elder exercising consent is the system working —
+       so this reads as a fact, not a fault, and there is no "ask them to turn it on" button.
+       Nagging your mother through our UI is not a feature. */
+    <section className="animate-rise rounded-card bg-surface-card p-8 text-center shadow-sm ring-1 ring-sand-200">
+      <h2 className="text-d-title font-semibold text-ink-900">Sharing is paused</h2>
+      <p className="mx-auto mt-3 max-w-md text-d-lead text-ink-700">
         {viewerRole === "elder"
           ? "You've turned sharing off. Nothing from your conversations is visible to family."
           : `${name} has turned sharing off. That's their call to make — Arjun won't show you anything until they turn it back on.`}
@@ -122,67 +165,99 @@ function SharingPaused({ name, viewerRole }: { name: string; viewerRole: Role })
 
 function Empty({ name }: { name: string }) {
   return (
-    <section className="animate-rise flex flex-col items-center justify-center rounded-3xl bg-white/60 px-8 py-16 text-center shadow-sm ring-1 ring-sand-200 backdrop-blur">
-      <div className="relative mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-sand-100">
-        <div className="absolute h-full w-full animate-ping rounded-full bg-sage-400/20" style={{ animationDuration: "3s" }} />
-        <div className="h-4 w-4 rounded-full bg-sage-500" />
+    <section className="animate-rise flex flex-col items-center justify-center rounded-card bg-surface-card px-8 py-16 text-center shadow-sm ring-1 ring-sand-200">
+      <div
+        aria-hidden="true"
+        className="relative mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-sand-100"
+      >
+        <div
+          className="absolute h-full w-full animate-ping rounded-full bg-sage-600/20"
+          style={{ animationDuration: "3s" }}
+        />
+        <div className="h-4 w-4 rounded-full bg-sage-600" />
       </div>
-      <h2 className="text-2xl font-semibold text-ink-900">Waiting for their first session</h2>
-      <p className="mx-auto mt-3 max-w-md text-lg leading-relaxed text-ink-700">
-        Once {name} finishes a conversation with Arjun, a summary and mood signals will appear here.
-        This page updates automatically.
+      <h2 className="text-d-title font-semibold text-ink-900">
+        Waiting for their first conversation
+      </h2>
+      <p className="mx-auto mt-3 max-w-md text-d-lead text-ink-700">
+        {`Once ${name} finishes talking with Arjun, a note about how they seemed will appear here. You don’t need to refresh.`}
       </p>
     </section>
   );
 }
 
-function TodayCard({ snap, name }: { snap: FamilySnapshot; name: string }) {
+function TodayCard({
+  snap,
+  name,
+  headingRef,
+}: {
+  snap: FamilySnapshot;
+  name: string;
+  headingRef: React.RefObject<HTMLHeadingElement | null>;
+}) {
   const latest = snap.latest!;
   const band = scoreBand(latest.score);
 
+  // No red exists here. The worst case is amber, and it says "worth a check-in".
   const tone = {
-    good: "bg-sage-100 text-sage-600",
+    good: "bg-sage-100 text-sage-800",
     ok: "bg-sand-200 text-ink-700",
-    attention: "bg-warn-100 text-warn-600",
+    attention: "bg-warn-100 text-warn-800",
   }[band.tone];
 
   return (
-    <section className="animate-rise rounded-3xl bg-white p-7 shadow-sm ring-1 ring-sand-200">
+    <section className="animate-rise rounded-card bg-surface-card p-7 shadow-sm ring-1 ring-sand-200">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium uppercase tracking-widest text-clay-600">
-            How {name} seemed
+          <h2
+            ref={headingRef}
+            tabIndex={-1}
+            className="text-d-eyebrow font-medium uppercase text-clay-700 focus-visible:outline-clay-700"
+          >
+            {`How ${name} seemed`}
+          </h2>
+          <p className="mt-2 text-d-display font-semibold capitalize text-ink-900">
+            {latest.mood}
           </p>
-          <p className="mt-2 text-4xl font-semibold capitalize text-ink-900">{latest.mood}</p>
-          <p className="mt-1 text-base text-ink-500">{when(latest.at)}</p>
+          <p className="mt-1 text-d-meta text-ink-500">{when(latest.at)}</p>
         </div>
-        <span className={`rounded-full px-4 py-2 text-base font-medium ${tone}`}>
+        {/* The band label carries the meaning in words. The tint only agrees with it —
+            colour is never the sole signal. */}
+        <span className={`rounded-full px-4 py-2 text-d-body font-medium ${tone}`}>
           {band.label}
         </span>
       </div>
 
       {latest.summary && (
-        <p className="mt-6 border-t border-sand-200 pt-6 text-lg leading-relaxed text-ink-900">
+        <p className="mt-6 border-t border-sand-200 pt-6 text-d-lead text-ink-900">
           {latest.summary}
         </p>
       )}
 
-      <p className="mt-5 text-sm text-ink-500">
-        A summary of the conversation — not a transcript. {name} sees this too.
+      <p className="mt-5 text-d-meta text-ink-500">
+        {`A summary of the conversation — not a transcript. ${name} sees this too.`}
       </p>
     </section>
   );
 }
 
+/**
+ * The only card with an accent fill, and that is the hierarchy argument in one stroke.
+ *
+ * The score answers "how is she?" — but the family already got that from the mood word and
+ * the summary above. This answers "what do I do?", and a nudge toward a phone call is the
+ * only output of this product that can actually change the elder's day. It outranks the
+ * number, so it gets the colour. Engagement with Arjun is never the win metric; a call is.
+ */
 function RecommendationCard({ text, name }: { text: string; name: string }) {
   return (
-    <section className="animate-rise rounded-3xl bg-clay-100 p-7 ring-1 ring-clay-500/20">
-      <p className="text-sm font-medium uppercase tracking-widest text-clay-600">
+    <section className="animate-rise rounded-card bg-clay-100 p-7 ring-1 ring-clay-500/25">
+      <h2 className="text-d-eyebrow font-medium uppercase text-clay-700">
         One thing that would land well
-      </p>
-      <p className="mt-3 text-xl leading-relaxed text-ink-900">{text}</p>
-      <p className="mt-4 text-sm text-ink-500">
-        Arjun keeps {name} company. It doesn&apos;t replace you.
+      </h2>
+      <p className="mt-3 text-d-title text-ink-900">{text}</p>
+      <p className="mt-4 text-d-meta text-ink-700">
+        {`Arjun keeps ${name} company. It doesn’t replace you.`}
       </p>
     </section>
   );
@@ -197,28 +272,39 @@ function SignalsCard({ snap }: { snap: FamilySnapshot }) {
   ];
 
   return (
-    <section className="animate-rise rounded-3xl bg-white p-7 shadow-sm ring-1 ring-sand-200">
-      <p className="text-sm font-medium uppercase tracking-widest text-clay-600">
+    <section className="animate-rise rounded-card bg-surface-card p-7 shadow-sm ring-1 ring-sand-200">
+      <h2 className="text-d-eyebrow font-medium uppercase text-clay-700">
         Signals from the conversation
-      </p>
+      </h2>
 
       <div className="mt-5 space-y-5">
         {signals.map((s) => (
           <div key={s.label}>
             <div className="flex items-baseline justify-between">
-              <p className="text-lg text-ink-900">{s.label}</p>
-              <p className="text-base tabular-nums text-ink-500">{s.value}</p>
+              <p className="text-d-lead text-ink-900">{s.label}</p>
+              <p className="text-d-body tabular-nums text-ink-500">{s.value}</p>
             </div>
-            <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-sand-100">
+            <div
+              role="meter"
+              aria-valuenow={s.value}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`${s.label} — ${s.hint}`}
+              className="mt-2 h-2.5 overflow-hidden rounded-full bg-sand-100"
+            >
               <div
                 className="h-full rounded-full bg-clay-500 transition-all duration-700"
                 style={{ width: `${s.value}%` }}
               />
             </div>
-            <p className="mt-1 text-sm text-ink-500">{s.hint}</p>
+            <p className="mt-1 text-d-meta text-ink-500">{s.hint}</p>
           </div>
         ))}
       </div>
+
+      <p className="mt-6 text-d-meta text-ink-500">
+        {`Signals read from how ${snap.elder.name ?? "they"} spoke — not a measurement, and not a medical assessment.`}
+      </p>
     </section>
   );
 }
@@ -234,16 +320,16 @@ function TrendCard({ trend }: { trend: FamilySnapshot["trend"] }) {
   });
 
   return (
-    <section className="animate-rise rounded-3xl bg-white p-7 shadow-sm ring-1 ring-sand-200">
-      <p className="text-sm font-medium uppercase tracking-widest text-clay-600">
+    <section className="animate-rise rounded-card bg-surface-card p-7 shadow-sm ring-1 ring-sand-200">
+      <h2 className="text-d-eyebrow font-medium uppercase text-clay-700">
         Over the last {trend.length} conversations
-      </p>
+      </h2>
 
       <svg
         viewBox={`0 0 ${w} ${h}`}
         className="mt-5 w-full"
         role="img"
-        aria-label={`Trend across ${trend.length} conversations`}
+        aria-label={trendSummary(trend)}
       >
         <polyline
           points={pts.join(" ")}
@@ -267,7 +353,7 @@ function TrendCard({ trend }: { trend: FamilySnapshot["trend"] }) {
         })}
       </svg>
 
-      <p className="mt-2 text-sm text-ink-500">
+      <p className="mt-2 text-d-meta text-ink-500">
         Most recent on the right. Higher is steadier — it is not a medical measurement.
       </p>
     </section>
@@ -285,10 +371,13 @@ function VitalsCard({ snap }: { snap: FamilySnapshot }) {
   ];
 
   return (
-    <section className="animate-rise rounded-3xl border-2 border-dashed border-sand-300 p-7">
+    /* Dashed border + "Simulated" chip + a plain-English disclaimer. Three separate signals
+       that this is not real, because a family member glancing at a heart rate must never
+       come away believing we measured it. */
+    <section className="animate-rise rounded-card border-2 border-dashed border-sand-400 p-7">
       <div className="flex items-center gap-3">
-        <p className="text-sm font-medium uppercase tracking-widest text-ink-500">Vitals</p>
-        <span className="rounded-full bg-sand-200 px-3 py-1 text-xs font-medium uppercase tracking-wide text-ink-700">
+        <h2 className="text-d-eyebrow font-medium uppercase text-ink-700">Vitals</h2>
+        <span className="rounded-full bg-sand-200 px-3 py-1 text-d-meta font-medium uppercase text-ink-700">
           Simulated
         </span>
       </div>
@@ -296,17 +385,30 @@ function VitalsCard({ snap }: { snap: FamilySnapshot }) {
       <div className="mt-5 grid grid-cols-3 gap-4">
         {items.map((i) => (
           <div key={i.label}>
-            <p className="text-2xl font-semibold tabular-nums text-ink-900">{i.value}</p>
-            <p className="mt-1 text-sm text-ink-500">{i.label}</p>
+            <p className="text-d-title font-semibold tabular-nums text-ink-900">{i.value}</p>
+            <p className="mt-1 text-d-meta text-ink-500">{i.label}</p>
           </div>
         ))}
       </div>
 
-      <p className="mt-5 text-sm text-ink-500">
+      <p className="mt-5 text-d-meta text-ink-500">
         Placeholder data — Arjun is not connected to a real device.
       </p>
     </section>
   );
+}
+
+/**
+ * A line chart is invisible to a screen reader. Spell out what the shape says, in the same
+ * non-clinical register the rest of the dashboard uses.
+ */
+function trendSummary(trend: FamilySnapshot["trend"]): string {
+  const first = trend[0].score;
+  const last = trend[trend.length - 1].score;
+  const delta = last - first;
+  const direction =
+    Math.abs(delta) < 5 ? "holding steady" : delta > 0 ? "trending up" : "trending down";
+  return `Wellness across the last ${trend.length} conversations: ${direction}, from ${first} to ${last} out of 100. Most recent last.`;
 }
 
 function when(iso: string): string {

@@ -40,8 +40,9 @@ yarn-error.log*
 # vercel
 .vercel
 
-# claude code local overrides
+# claude code local overrides + vendored agent skills (installed via `npx skills add`)
 .claude/settings.local.json
+.claude/skills/
 
 # typescript
 *.tsbuildinfo

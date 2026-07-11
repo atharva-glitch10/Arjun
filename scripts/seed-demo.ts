@@ -1,5 +1,4 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/types";
 
 // Run via: npx tsx scripts/seed-demo.ts <elder_id>
 
@@ -18,7 +17,7 @@ async function main() {
     process.exit(1);
   }
 
-  const sb = createClient<Database>(url, key);
+  const sb = createClient(url, key);
 
   console.log(`Seeding demo data for elder: ${elderId}...`);
 

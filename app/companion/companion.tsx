@@ -35,6 +35,16 @@ export default function Companion({
   const [result, setResult] = useState<EndResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * What a screen reader actually hears.
+   *
+   * The transcript itself is NOT a live region. Wrapping a token stream in aria-live would
+   * re-announce the whole growing string on every chunk — the listener hears "Good" "Good
+   * morn" "Good morning" forever and the app is unusable. Instead we stay silent while the
+   * tokens land and announce the finished sentence exactly once, here.
+   */
+  const [announcement, setAnnouncement] = useState("");
+
   const greeted = useRef(false);
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -42,6 +52,7 @@ export default function Companion({
   async function runTurn(history: ChatMessage[]) {
     setThinking(true);
     setError(null);
+    setAnnouncement("");
 
     try {
       const res = await fetch("/api/chat", {
@@ -59,11 +70,13 @@ export default function Companion({
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
+      let full = "";
 
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
+        full += chunk;
         setMessages((m) => {
           const next = [...m];
           next[next.length - 1] = {
@@ -73,6 +86,9 @@ export default function Companion({
           return next;
         });
       }
+
+      // Streaming is over. Say it once, as a whole sentence.
+      setAnnouncement(full);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -145,15 +161,13 @@ export default function Companion({
       <header className="border-b border-sand-200 bg-sand-100/70 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-4">
           <div>
-            <p className="text-sm font-medium uppercase tracking-widest text-clay-600">
-              Arjun
-            </p>
-            <p className="text-base text-ink-500">Good to see you, {elderName}.</p>
+            <p className="text-d-eyebrow font-medium uppercase text-clay-700">Arjun</p>
+            <p className="text-e-meta text-ink-700">Good to see you, {elderName}.</p>
           </div>
           <div className="flex items-center gap-3">
             <MemoryPanel facts={facts} shareCode={shareCode} shareEnabled={shareEnabled} />
             <form action={signOut}>
-              <button className="rounded-xl px-3 py-2 text-base text-ink-500 hover:text-ink-900">
+              <button className="rounded-control px-3 py-2 text-e-meta text-ink-700 hover:text-ink-900">
                 Sign out
               </button>
             </form>
@@ -161,20 +175,30 @@ export default function Companion({
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl space-y-5 px-5 py-8">
+      <main id="conversation" className="flex-1 overflow-y-auto">
+        {/*
+          role="log" with aria-live OFF. The transcript is a readable region a screen-reader
+          user can navigate at their own pace — it does not shout each token as it lands.
+          The finished turn is announced once, by the polite region below.
+        */}
+        <div
+          role="log"
+          aria-label="Your conversation with Arjun"
+          className="mx-auto max-w-3xl space-y-5 px-5 py-8"
+        >
           {messages.map((m, i) => (
             <div
               key={i}
               className={`animate-rise flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <p
-                className={`max-w-[85%] whitespace-pre-wrap rounded-3xl px-6 py-4 text-xl leading-relaxed ${
+                className={`max-w-[85%] whitespace-pre-wrap rounded-bubble px-6 py-4 text-e-body ${
                   m.role === "user"
-                    ? "bg-clay-500 text-white"
-                    : "bg-white text-ink-900 shadow-sm ring-1 ring-sand-200"
+                    ? "bg-clay-700 text-white"
+                    : "bg-surface-card text-ink-900 shadow-sm ring-1 ring-sand-200"
                 }`}
               >
+                <span className="sr-only">{m.role === "user" ? "You said: " : "Arjun said: "}</span>
                 {m.content}
               </p>
             </div>
@@ -182,7 +206,11 @@ export default function Companion({
 
           {thinking && messages[messages.length - 1]?.role !== "assistant" && (
             <div className="flex justify-start">
-              <p className="rounded-3xl bg-white px-6 py-5 shadow-sm ring-1 ring-sand-200">
+              <p
+                role="status"
+                aria-label="Arjun is thinking"
+                className="rounded-bubble bg-surface-card px-6 py-5 shadow-sm ring-1 ring-sand-200"
+              >
                 <span className="dot inline-block h-2.5 w-2.5 rounded-full bg-ink-500" />
                 <span className="dot ml-1.5 inline-block h-2.5 w-2.5 rounded-full bg-ink-500" />
                 <span className="dot ml-1.5 inline-block h-2.5 w-2.5 rounded-full bg-ink-500" />
@@ -191,19 +219,28 @@ export default function Companion({
           )}
 
           {error && (
-            <p role="alert" className="text-lg text-clay-600">
+            <p role="alert" className="text-e-lead text-clay-700">
               {error}
             </p>
           )}
 
           <div ref={bottom} />
         </div>
+
+        {/* Announced once, when the sentence is whole. Never mid-stream. */}
+        <p aria-live="polite" className="sr-only">
+          {announcement}
+        </p>
       </main>
 
       <footer className="border-t border-sand-200 bg-sand-100/70 backdrop-blur">
         <div className="mx-auto max-w-3xl px-5 py-5">
           <form onSubmit={send} className="flex items-end gap-3">
+            <label htmlFor="message" className="sr-only">
+              Say something to Arjun
+            </label>
             <textarea
+              id="message"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
@@ -214,13 +251,12 @@ export default function Companion({
               }}
               rows={1}
               placeholder="Say something to Arjun…"
-              aria-label="Your message"
-              className="flex-1 resize-none rounded-2xl border-2 border-sand-200 bg-white px-5 py-4 text-xl leading-relaxed text-ink-900 placeholder:text-ink-500/60 focus:border-clay-500 focus:outline-none"
+              className="min-h-[60px] flex-1 resize-none rounded-control border-2 border-ink-500 bg-surface-card px-5 py-4 text-e-body text-ink-900 placeholder:text-ink-500 focus:border-clay-700 focus:outline-none"
             />
             <button
               type="submit"
               disabled={!input.trim() || thinking}
-              className="rounded-2xl bg-clay-500 px-7 py-4 text-xl font-medium text-white transition hover:bg-clay-600 disabled:opacity-40"
+              className="min-h-[60px] rounded-control bg-clay-700 px-7 text-e-body font-medium text-white transition-colors duration-[--duration-hover] hover:bg-clay-800 disabled:opacity-40"
             >
               Send
             </button>
@@ -230,7 +266,7 @@ export default function Companion({
             <button
               onClick={endSession}
               disabled={ending || thinking}
-              className="mt-3 text-base text-ink-500 underline underline-offset-4 hover:text-ink-900 disabled:opacity-50"
+              className="mt-2 text-e-meta text-ink-700 underline underline-offset-4 hover:text-ink-900 disabled:opacity-50"
             >
               {ending ? "Wrapping up…" : "I'm done for now"}
             </button>
@@ -257,9 +293,9 @@ function SessionClosed({
   return (
     <main className="flex-1 flex items-center justify-center px-6 py-16">
       <div className="w-full max-w-xl animate-rise">
-        <h1 className="text-3xl font-semibold text-ink-900">Thank you for talking.</h1>
+        <h1 className="text-e-display font-semibold text-ink-900">Thank you for talking.</h1>
 
-        <p className="mt-4 text-lg text-ink-700">
+        <p className="mt-4 text-e-lead text-ink-700">
           {result.facts_remembered > 0
             ? `I'll remember ${result.facts_remembered} ${
                 result.facts_remembered === 1 ? "thing" : "things"
@@ -267,16 +303,16 @@ function SessionClosed({
             : "I'll keep today in mind."}
         </p>
 
-        <section className="mt-8 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-sand-200">
-          <h2 className="text-base font-medium uppercase tracking-widest text-clay-600">
+        <section className="mt-8 rounded-card bg-surface-card p-6 shadow-sm ring-1 ring-sand-200">
+          <h2 className="text-d-eyebrow font-medium uppercase text-clay-700">
             {shareEnabled ? "What your family will see" : "What would be shared"}
           </h2>
-          <p className="mt-3 text-lg leading-relaxed text-ink-900">{result.summary}</p>
-          <p className="mt-4 border-t border-sand-200 pt-4 text-base leading-relaxed text-ink-700">
+          <p className="mt-3 text-e-body text-ink-900">{result.summary}</p>
+          <p className="mt-4 border-t border-sand-200 pt-4 text-e-meta text-ink-700">
             <span className="font-medium">Suggestion for them: </span>
             {result.recommendation}
           </p>
-          <p className="mt-4 text-sm text-ink-500">
+          <p className="mt-4 text-e-meta text-ink-700">
             {shareEnabled
               ? "They see this note — never the words you actually said."
               : "Sharing is off, so this stays with you."}
@@ -285,7 +321,7 @@ function SessionClosed({
 
         <button
           onClick={onAgain}
-          className="mt-8 rounded-2xl bg-clay-500 px-8 py-4 text-lg font-medium text-white transition hover:bg-clay-600"
+          className="mt-8 rounded-control bg-clay-700 px-8 py-4 text-e-body font-medium text-white transition-colors duration-[--duration-hover] hover:bg-clay-800"
         >
           Talk again
         </button>

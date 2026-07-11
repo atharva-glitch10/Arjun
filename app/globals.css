@@ -1,31 +1,136 @@
 @import "tailwindcss";
 
 /*
- * Warm, low-glare palette. The elder-facing side is deliberately paper-like rather than a
- * bright white app surface: large type, generous hit targets, no dark mode (a 78-year-old
- * squinting at grey-on-black at 7am is a worse outcome than an app that ignores the OS).
+ * ARJUN — one token system, two surfaces.
+ *
+ * The companion (elder) and the dashboard (family) obey opposite laws: one is a reading
+ * surface holding a single conversation, the other is a scanning surface holding five blocks.
+ * They share every colour and every space, and diverge on exactly one axis — type size.
+ * That is the whole trick: `--text-e-*` for the elder, `--text-d-*` for the dashboard.
+ *
+ * Warm, low-glare, paper-like. No dark mode, deliberately: a 78-year-old squinting at
+ * grey-on-black at 7am is a worse outcome than an app that ignores the OS.
  */
 @theme {
+  /* ─────────────────────────────────────────────────────────────
+   * COLOUR
+   * Two tiers per hue, and the distinction is load-bearing:
+   *   -100..-600  decorative — fills, rules, dots, chart strokes. NEVER text.
+   *   -700..-800  text-safe  — clears WCAG AA (4.5:1) on our sand/white grounds.
+   * The -500/-600 steps sit at 3.4–4.1:1: fine behind a shape, illegal under a
+   * sentence. Setting body copy in them is the bug this split exists to prevent.
+   *
+   * There is NO alarm red in this palette, and that is a product decision. A red badge
+   * on a screen about your mother is a heart-attack trigger for the person reading it.
+   * The most urgent thing this UI may say is amber, and it says "worth a call".
+   * ───────────────────────────────────────────────────────────── */
+
+  /* sand — paper. The ground. Never pure white; white glares, and glare is a
+   * physical problem for an ageing eye. */
   --color-sand-50: #fbf8f4;
   --color-sand-100: #f5efe6;
   --color-sand-200: #e9dfd0;
   --color-sand-300: #d5c5ae;
+  --color-sand-400: #9c8a70; /* 3.34:1 on white — lightest legal control border */
 
-  --color-ink-900: #2a2622;
-  --color-ink-700: #4a443c;
-  --color-ink-500: #6f675d;
+  /* ink — voice. All text. Three degrees of presence, not three colours. */
+  --color-ink-900: #2a2622; /* 15.01:1 on white — AAA */
+  --color-ink-700: #4a443c; /*  9.61:1 on white — AAA */
+  --color-ink-500: #6f675d; /*  5.56:1 on white — AA  */
 
+  /* clay — Arjun himself. His words, the primary action, the focus ring. Nothing else. */
   --color-clay-100: #f6e6df;
-  --color-clay-500: #b8674a;
+  --color-clay-500: #b8674a; /* decorative only — 4.14:1 */
   --color-clay-600: #a1573c;
+  --color-clay-700: #8f4a30; /* 6.58:1 on white — text + fills behind white text */
+  --color-clay-800: #7a3d28; /* 8.31:1 on white — hover / active */
 
+  /* sage — reassurance. "Doing well", sharing-is-on. Quiet, never celebratory. */
   --color-sage-100: #e4eee5;
-  --color-sage-600: #5b7f60;
+  --color-sage-600: #5b7f60; /* decorative only — 4.27:1 */
+  --color-sage-800: #3d5a42; /* 6.45:1 on sage-100 */
 
+  /* warn — attention, NOT alarm. The ceiling of urgency this product may express. */
   --color-warn-100: #f9edd6;
-  --color-warn-600: #a8761f;
+  --color-warn-600: #a8761f; /* decorative only — 3.76:1 */
+  --color-warn-800: #6f4d14; /* 6.59:1 on warn-100 */
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* ─── semantic aliases — components reference these, never a raw hue ─── */
+  --color-surface: var(--color-sand-50); /* page */
+  --color-surface-raised: var(--color-sand-100); /* header, footer, wells */
+  --color-surface-card: #ffffff; /* cards, message bubbles */
+  --color-text: var(--color-ink-900);
+  --color-text-secondary: var(--color-ink-700);
+  --color-text-muted: var(--color-ink-500);
+  --color-rule: var(--color-sand-200); /* decorative divider ONLY */
+  --color-border-control: var(--color-ink-500); /* any interactive boundary */
+  --color-border-soft: var(--color-sand-400); /* secondary button boundary */
+  --color-accent: var(--color-clay-700); /* Arjun's voice + primary action */
+  --color-accent-hover: var(--color-clay-800);
+  --color-ring: var(--color-clay-700);
+
+  /* ─────────────────────────────────────────────────────────────
+   * TYPE — two scales, one system.
+   *
+   * COMPANION (--text-e-*): base 20px. The elder reads at arm's length, on an iPad,
+   * possibly at 200% zoom, with presbyopia. The surface holds ONE thing — a conversation —
+   * so it can afford the size. Nothing competes with it.
+   *
+   * DASHBOARD (--text-d-*): base 16px. An adult child scanning on a phone between meetings.
+   * It holds five blocks. Inflating it to 20px would push the recommendation below the fold,
+   * which defeats the hierarchy. Bigger is not kinder if it buries the thing that matters.
+   * ───────────────────────────────────────────────────────────── */
+
+  /* companion — elder-facing */
+  --text-e-body: 1.25rem; /* 20px */
+  --text-e-body--line-height: 1.65;
+  --text-e-lead: 1.375rem; /* 22px */
+  --text-e-lead--line-height: 1.6;
+  --text-e-title: 1.75rem; /* 28px */
+  --text-e-title--line-height: 1.3;
+  --text-e-display: 2.125rem; /* 34px */
+  --text-e-display--line-height: 1.2;
+  --text-e-meta: 1.0625rem; /* 17px — "small" here is still >16px. There is no fine print
+                             * on the elder surface; if it isn't worth reading, cut it. */
+  --text-e-meta--line-height: 1.5;
+
+  /* dashboard — family-facing */
+  --text-d-body: 1rem; /* 16px */
+  --text-d-body--line-height: 1.6;
+  --text-d-lead: 1.125rem; /* 18px */
+  --text-d-lead--line-height: 1.6;
+  --text-d-title: 1.375rem; /* 22px */
+  --text-d-title--line-height: 1.35;
+  --text-d-display: 2rem; /* 32px */
+  --text-d-display--line-height: 1.2;
+  --text-d-meta: 0.875rem; /* 14px */
+  --text-d-meta--line-height: 1.5;
+  --text-d-eyebrow: 0.8125rem; /* 13px, uppercase, tracked */
+  --text-d-eyebrow--line-height: 1.4;
+  --text-d-eyebrow--letter-spacing: 0.08em;
+
+  /* ─── space — 4px base, editorial rhythm ─── */
+  --spacing: 0.25rem;
+  --space-section: 2rem;
+  --space-card: 1.75rem;
+
+  /* ─── measure — long-form stays readable at any viewport ─── */
+  --container-read: 48rem; /* 768px — chat + dashboard column */
+  --container-form: 28rem; /* 448px — login, onboarding */
+
+  /* ─── motion — punctuation, never decoration ───
+   * Nothing bouncy. Nothing that reads as a notification demanding attention. */
+  --ease-quiet: cubic-bezier(0.22, 1, 0.36, 1); /* enter — decelerates, settles, no overshoot */
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1); /* leave */
+  --duration-press: 90ms;
+  --duration-hover: 140ms;
+  --duration-enter: 280ms;
+  --duration-arrive: 420ms; /* the live-update banner — slower, so it reads as arrival */
+
+  /* ─── radius ─── */
+  --radius-control: 1rem;
+  --radius-card: 1.5rem;
+  --radius-bubble: 1.5rem;
 }
 
 html {
@@ -33,34 +138,120 @@ html {
 }
 
 body {
-  background: var(--color-sand-50);
-  color: var(--color-ink-900);
+  background: var(--color-surface);
+  color: var(--color-text);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Focus rings an older user can actually see. */
+/*
+ * Focus rings an older user can actually see. 3px, high contrast (clay-700 is 6.22:1
+ * against sand-50), and offset so it never sits on top of the thing it's marking.
+ */
 *:focus-visible {
-  outline: 3px solid var(--color-clay-500);
+  outline: 3px solid var(--color-ring);
   outline-offset: 2px;
+  border-radius: 4px;
 }
 
+/*
+ * Tremor / low-dexterity: kill the 300ms tap delay and stop a slightly-dragged tap from
+ * being swallowed as a text selection. A hand that shakes should still be able to press Send.
+ */
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+/* Every interactive control clears 44x44 CSS px, everywhere, without exception. */
+button,
+[role="button"],
+input,
+textarea,
+select {
+  min-height: 44px;
+}
+
+/* Screen-reader-only, but focusable (skip links). */
+.sr-only:not(:focus):not(:active) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── keyframes ── */
+
+/* The universal entrance. 6px of travel: enough to read as "arrived", too little to
+ * read as "animated". */
 @keyframes rise {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.animate-rise { animation: rise 0.28s ease-out both; }
+.animate-rise {
+  animation: rise var(--duration-enter) var(--ease-quiet) both;
+}
 
+/* The live-update banner on the dashboard. Deliberately slower and taller-travelling than
+ * `rise` — this one is asking for attention, so it must be legible as a distinct event,
+ * not mistaken for the page settling. It still never flashes, pulses, or bounces. */
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-arrive {
+  animation: arrive var(--duration-arrive) var(--ease-quiet) both;
+}
+
+/* Typing indicator. Opacity only — a bouncing dot reads as impatience. */
 @keyframes blink {
-  0%, 80%, 100% { opacity: 0.2; }
-  40%           { opacity: 1; }
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
 }
-.dot { animation: blink 1.3s infinite both; }
-.dot:nth-child(2) { animation-delay: 0.16s; }
-.dot:nth-child(3) { animation-delay: 0.32s; }
+.dot {
+  animation: blink 1.3s infinite both;
+}
+.dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
 
+/*
+ * Reduced motion. Note `rise` and `arrive` are *entrances*: killing the duration must still
+ * leave the element VISIBLE, which `both` + a 0.01ms duration does. Content is never hidden
+ * behind an animation that might not run.
+ */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
