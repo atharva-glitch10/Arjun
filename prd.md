@@ -117,7 +117,9 @@ Single Next.js app (App Router). No separate FastAPI service for the MVP — one
 - Supabase: Postgres + auth + realtime.
 - Server route handlers use the service-role key; skip client-side RLS wrangling for the hackathon.
 
-**Optional voice layer (stretch, not the spine):** OpenAI Realtime speech-to-speech (`gpt-realtime-2`), browser WebRTC, ephemeral client secret minted server-side (never ship the real key to the browser). The voice session runs client-side over WebRTC — not through a Vercel function (serverless timeout would kill it). The memory + mood pipeline is unchanged: it runs on the transcript the Realtime session emits, exactly as in the text path.
+- **LLM:** Groq (OpenAI-compatible endpoint), model Qwen. One provider for chat, fact extraction, and mood — one schema, not two. Enforced structured output via `json_schema`, falling back to a forced tool call where the model doesn't support it. Qwen is a reasoning model, so `<think>` output is suppressed and stripped: chain-of-thought must never reach an elder or a stored summary.
+
+**Optional voice layer (stretch, not the spine):** ElevenLabs speech-to-speech. The browser connects using a **short-lived signed URL minted server-side** — the API key never ships to the client. The voice session runs client-side, not through a Vercel function (a serverless timeout would kill it). The memory + mood pipeline is unchanged: it runs on the transcript the voice session emits, exactly as in the text path. Voice is a second input surface, never a second pipeline.
 
 ## 10. Ownership split
 

@@ -1,10 +1,13 @@
 /**
- * Confirms XAI_API_KEY works and lists the models you can actually call, so XAI_MODEL is
- * set from reality rather than from a guess.
+ * Confirms GROQ_API_KEY works, lists the models you can actually call, and proves the
+ * configured model can be forced into structured output — which fact + mood extraction
+ * depends on. Qwen on Groq is happier with tool calling than with response_format, so
+ * lib/llm.ts tries json_schema and falls back; this shows you which road it took.
  *
  *   npm run check:llm
  */
-import { llm, MODEL } from "../lib/llm";
+import { structured, llm, MODEL } from "../lib/llm";
+import { z } from "zod";
 
 async function main() {
   const client = llm();
@@ -20,35 +23,29 @@ async function main() {
   const configured = ids.includes(MODEL);
   console.log(
     configured
-      ? `\n\x1b[32mXAI_MODEL="${MODEL}" is available.\x1b[0m\n`
-      : `\n\x1b[31mXAI_MODEL="${MODEL}" is NOT in that list. Set XAI_MODEL in .env.local to one of the above.\x1b[0m\n`,
+      ? `\n\x1b[32mGROQ_MODEL="${MODEL}" is available.\x1b[0m`
+      : `\n\x1b[31mGROQ_MODEL="${MODEL}" is NOT in that list. Set GROQ_MODEL in .env.local to one of the above.\x1b[0m\n`,
   );
-
   if (!configured) process.exit(1);
 
-  // Structured output is load-bearing (CLAUDE.md), so prove the model honours json_schema.
-  process.stdout.write("Checking json_schema structured output… ");
-  const res = await client.chat.completions.create({
-    model: MODEL,
-    messages: [{ role: "user", content: "Return the number 7 and the word seven." }],
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "probe",
-        strict: true,
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          required: ["n", "word"],
-          properties: { n: { type: "integer" }, word: { type: "string" } },
-        },
+  console.log("\nChecking enforced structured output…\n");
+
+  const probe = await structured({
+    schemaName: "probe",
+    jsonSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["n", "word"],
+      properties: {
+        n: { type: "integer", description: "the number" },
+        word: { type: "string", description: "the number spelled out" },
       },
     },
+    validator: z.object({ n: z.number(), word: z.string() }),
+    messages: [{ role: "user", content: "Return the number 7 and the word seven." }],
   });
 
-  const raw = res.choices[0]?.message?.content ?? "";
-  JSON.parse(raw); // throws if the model ignored the schema
-  console.log(`\x1b[32mOK\x1b[0m — ${raw}\n`);
+  console.log(`\x1b[32mOK\x1b[0m — structured output works: ${JSON.stringify(probe)}\n`);
 }
 
 main().catch((err) => {

@@ -18,7 +18,7 @@ import { analyzeConversation } from "../lib/agent/analyze";
 import { companionSystemPrompt } from "../lib/agent/prompts";
 import { mockVitals, wellnessScore } from "../lib/agent/wellness";
 import { containsClinicalLanguage, scrubClinical } from "../lib/agent/guard";
-import { llm, MODEL } from "../lib/llm";
+import { streamChat, stripThinking, MODEL } from "../lib/llm";
 import type { ChatMessage } from "../lib/types";
 
 const db = supabaseAdmin();
@@ -133,19 +133,23 @@ async function main() {
     check(ctx.facts.length > 0, `facts loaded back out of Postgres (${ctx.facts.length})`);
     check(ctx.lastSummary !== null, "last conversation's summary loaded back out of Postgres");
 
-    const greeting = await llm().chat.completions.create({
-      model: MODEL,
-      temperature: 0.7,
-      messages: [
-        { role: "system", content: companionSystemPrompt(ctx) },
-        {
-          role: "user",
-          content: "(They have just opened the app and are waiting for you to say hello.)",
-        },
-      ],
-    });
+    // Exactly the call /api/chat makes on an opening turn.
+    const stream = await streamChat([
+      { role: "system", content: companionSystemPrompt(ctx) },
+      {
+        role: "user",
+        content: "(They have just opened the app and are waiting for you to say hello.)",
+      },
+    ]);
 
-    const text = greeting.choices[0]?.message?.content ?? "";
+    let text = "";
+    for await (const chunk of stream) {
+      text += chunk.choices[0]?.delta?.content ?? "";
+    }
+    text = stripThinking(text);
+
+    check(text.length > 0, "the agent produced an opening greeting");
+    check(!/<think>/i.test(text), "no chain-of-thought leaked into the greeting");
     console.log(`\n  Arjun opens with:\n  \x1b[36m"${text.trim()}"\x1b[0m\n`);
 
     check(

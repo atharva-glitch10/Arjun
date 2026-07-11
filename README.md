@@ -47,7 +47,7 @@ cp .env.example .env.local
 ```
 
 Fill in the Supabase URL, anon key, and service-role key (Project Settings → API), plus your
-xAI key from [console.x.ai](https://console.x.ai).
+Groq key from [console.groq.com/keys](https://console.groq.com/keys).
 
 ### 3. Pick a model
 
@@ -55,8 +55,19 @@ xAI key from [console.x.ai](https://console.x.ai).
 npm run check:llm
 ```
 
-Lists the models your key can actually call, and verifies the one in `XAI_MODEL` honours
-`json_schema` structured output — which fact and mood extraction depend on.
+Lists the models your key can actually call, and proves the one in `GROQ_MODEL` can be forced
+into structured output — which fact and mood extraction depend on.
+
+The LLM is **Groq**, running **Qwen** (`qwen/qwen3-32b` by default). Two wrinkles handled in
+`lib/llm.ts`:
+
+- **Qwen is a reasoning model.** It emits `<think>` blocks. We suppress them at the source
+  (`reasoning_format: "hidden"`), strip them defensively, and filter them mid-stream in
+  `/api/chat`. An older adult must never watch the companion reason about her out loud, and a
+  chain of thought must never end up inside a stored summary.
+- **Groq's `json_schema` support varies by model.** `structured()` asks for `json_schema` and
+  falls back to a *forced tool call* if the model rejects it. Both are enforced structured
+  output, so the "never ask nicely for JSON" rule holds either way.
 
 ### 4. Prove the memory works — before touching the UI
 
@@ -113,3 +124,7 @@ npm run dev
 - Schema additions beyond `prd.md` §8 (all additive, no renames): `elders.share_code`,
   the `profiles` table, and a unique index on `facts(elder_id, category, key)` so a
   re-mentioned fact updates in place instead of duplicating.
+- **Voice is a stretch layer, not the spine** (ElevenLabs speech-to-speech, signed URL minted
+  server-side). It is not built yet, and the text loop must stand alone without it. When it
+  lands it runs the *same* memory + mood pipeline on the transcript it emits — a second input
+  surface, never a second pipeline.

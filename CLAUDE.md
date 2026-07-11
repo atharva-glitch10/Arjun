@@ -35,7 +35,12 @@ The agent writes `conversations`, `facts`, `wellness`. The dashboard reads them.
 Phone/smartphone assistant, real wearables, emergency escalation, voice in the core loop, vector search.
 
 ## Voice (optional stretch only)
-If added: OpenAI Realtime `gpt-realtime-2`, browser WebRTC, ephemeral client secret minted server-side (never expose the real key to the browser). Voice session is client-side WebRTC, not through a Vercel function. Memory + mood pipeline runs on the emitted transcript, unchanged from the text path.
+If added: ElevenLabs speech-to-speech (Conversational AI agent). The browser connects with a **short-lived signed URL minted server-side** — never expose `ELEVENLABS_API_KEY` to the client. The voice session runs client-side (WebRTC/WebSocket), not through a Vercel function, which would time out. Memory + mood pipeline runs on the emitted transcript, unchanged from the text path — voice is a different input surface, not a second pipeline.
+
+## LLM provider
+Groq, OpenAI-compatible endpoint (`https://api.groq.com/openai/v1`), model Qwen (`GROQ_MODEL`, default `qwen/qwen3-32b`). All LLM access goes through `lib/llm.ts`.
+- Qwen is a **reasoning model**: it emits `<think>` blocks. `lib/llm.ts` suppresses them at the source (`reasoning_format: "hidden"`) and strips them defensively; `/api/chat` also filters them mid-stream. Chain-of-thought must never reach an elder or a stored summary.
+- Groq's `json_schema` support varies by model. `structured()` asks for `json_schema` and falls back to a **forced tool call** — both are enforced structured output, so the CLAUDE.md rule holds either way. Never "please return JSON".
 
 ## Conventions
 - Run `npm run build` before committing.
