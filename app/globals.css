@@ -1,26 +1,66 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Warm, low-glare palette. The elder-facing side is deliberately paper-like rather than a
+ * bright white app surface: large type, generous hit targets, no dark mode (a 78-year-old
+ * squinting at grey-on-black at 7am is a worse outcome than an app that ignores the OS).
+ */
+@theme {
+  --color-sand-50: #fbf8f4;
+  --color-sand-100: #f5efe6;
+  --color-sand-200: #e9dfd0;
+  --color-sand-300: #d5c5ae;
+
+  --color-ink-900: #2a2622;
+  --color-ink-700: #4a443c;
+  --color-ink-500: #6f675d;
+
+  --color-clay-100: #f6e6df;
+  --color-clay-500: #b8674a;
+  --color-clay-600: #a1573c;
+
+  --color-sage-100: #e4eee5;
+  --color-sage-600: #5b7f60;
+
+  --color-warn-100: #f9edd6;
+  --color-warn-600: #a8761f;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-sand-50);
+  color: var(--color-ink-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Focus rings an older user can actually see. */
+*:focus-visible {
+  outline: 3px solid var(--color-clay-500);
+  outline-offset: 2px;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-rise { animation: rise 0.28s ease-out both; }
+
+@keyframes blink {
+  0%, 80%, 100% { opacity: 0.2; }
+  40%           { opacity: 1; }
+}
+.dot { animation: blink 1.3s infinite both; }
+.dot:nth-child(2) { animation-delay: 0.16s; }
+.dot:nth-child(3) { animation-delay: 0.32s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
