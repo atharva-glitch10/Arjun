@@ -16,13 +16,29 @@ type EndResult = {
   recommendation: string;
 };
 
+const LANG_MAP: Record<string, string> = {
+  English: "en-US",
+  Hindi: "hi-IN",
+  Spanish: "es-ES",
+  French: "fr-FR",
+  Mandarin: "zh-CN",
+  German: "de-DE",
+  Italian: "it-IT",
+  Marathi: "mr-IN",
+  Bengali: "bn-IN",
+  Tamil: "ta-IN",
+  Telugu: "te-IN",
+};
+
 export default function Companion({
   elderName,
+  nativeLanguage,
   shareCode,
   shareEnabled,
   facts,
 }: {
   elderName: string;
+  nativeLanguage: string;
   shareCode: string;
   shareEnabled: boolean;
   facts: Fact[];
@@ -128,9 +144,33 @@ export default function Companion({
   useEffect(() => {
     if (announcement && voiceModeEnabled && typeof window !== "undefined" && "speechSynthesis" in window) {
       const utterance = new SpeechSynthesisUtterance(announcement);
-      window.speechSynthesis.speak(utterance);
+      
+      const bcp47 = LANG_MAP[nativeLanguage] || "en-US";
+      utterance.lang = bcp47;
+      
+      const playVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+          const langPrefix = bcp47.split('-')[0];
+          const targetVoice = voices.find(v => v.lang === bcp47) || voices.find(v => v.lang.startsWith(langPrefix));
+          if (targetVoice) {
+            utterance.voice = targetVoice;
+          }
+          window.speechSynthesis.speak(utterance);
+        }
+      };
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        playVoice();
+      } else {
+        window.speechSynthesis.onvoiceschanged = () => {
+          playVoice();
+          window.speechSynthesis.onvoiceschanged = null;
+        };
+      }
     }
-  }, [announcement, voiceModeEnabled]);
+  }, [announcement, voiceModeEnabled, nativeLanguage]);
 
   const toggleListening = () => {
     if (isListening) {
@@ -150,6 +190,7 @@ export default function Companion({
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
+      recognition.lang = LANG_MAP[nativeLanguage] || "en-US";
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       recognition.onresult = (event: any) => {

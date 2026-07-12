@@ -17,6 +17,7 @@ export default async function CompanionPage() {
   return (
     <Companion
       elderName={session.elder.name ?? "friend"}
+      nativeLanguage={session.elder.native_language ?? "English"}
       shareCode={session.elder.share_code ?? ""}
       shareEnabled={session.elder.share_enabled}
       facts={ctx.facts.map((f) => ({ category: f.category, key: f.key, value: f.value }))}
