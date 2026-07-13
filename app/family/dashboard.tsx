@@ -362,37 +362,222 @@ function TrendCard({ trend }: { trend: FamilySnapshot["trend"] }) {
 
 function VitalsCard({ snap }: { snap: FamilySnapshot }) {
   const v = snap.latest?.vitals;
-  if (!v) return null;
+  // Guard: old DB rows pre-dating the WHOOP schema won't have recovery_score.
+  // Rather than crash on `.toFixed(undefined)`, simply hide the panel for those rows.
+  if (!v || typeof v.recovery_score === "undefined") return null;
 
-  const items = [
-    { label: "Resting heart rate", value: `${v.resting_heart_rate} bpm` },
-    { label: "Sleep", value: `${v.sleep_hours} h` },
-    { label: "Steps", value: v.steps.toLocaleString() },
-  ];
+  // Recovery colour: mirrors WHOOP's green/yellow/red zones
+  const recoveryColor =
+    v.recovery_score >= 67
+      ? { ring: "#22c55e", bg: "bg-green-50",  text: "text-green-700",  label: "text-green-600" }
+      : v.recovery_score >= 34
+      ? { ring: "#f59e0b", bg: "bg-amber-50",  text: "text-amber-700",  label: "text-amber-600" }
+      : { ring: "#ef4444", bg: "bg-red-50",    text: "text-red-700",    label: "text-red-600"   };
+
+  // Strain colour: low=blue, moderate=green, high=orange
+  const strainColor =
+    v.day_strain < 8
+      ? "text-blue-600"
+      : v.day_strain < 15
+      ? "text-green-600"
+      : "text-orange-600";
+
+  // Sleep performance colour
+  const sleepColor =
+    v.sleep_performance_percent >= 70
+      ? "text-green-600"
+      : v.sleep_performance_percent >= 50
+      ? "text-amber-600"
+      : "text-red-600";
 
   return (
-    /* Dashed border + "Simulated" chip + a plain-English disclaimer. Three separate signals
-       that this is not real, because a family member glancing at a heart rate must never
-       come away believing we measured it. */
+    /*
+     * Three separate "Simulated" signals — the dashed border, the chip, and the disclaimer.
+     * A family member glancing at a recovery score must never believe we measured it.
+     */
     <section className="animate-rise rounded-card border-2 border-dashed border-sand-400 p-7">
-      <div className="flex items-center gap-3">
-        <h2 className="text-d-eyebrow font-medium uppercase text-ink-700">Vitals</h2>
+      {/* Header */}
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-d-eyebrow font-medium uppercase text-ink-700">
+          Activity &amp; Recovery
+        </h2>
         <span className="rounded-full bg-sand-200 px-3 py-1 text-d-meta font-medium uppercase text-ink-700">
-          Simulated
+          WHOOP-style · Simulated
         </span>
       </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-4">
-        {items.map((i) => (
-          <div key={i.label}>
-            <p className="text-d-title font-semibold tabular-nums text-ink-900">{i.value}</p>
-            <p className="mt-1 text-d-meta text-ink-500">{i.label}</p>
+      {/* Three panels */}
+      <div className="mt-6 grid gap-5 sm:grid-cols-3">
+
+        {/* ── Recovery ── */}
+        <div className={`rounded-xl p-5 ${recoveryColor.bg} ring-1 ring-black/5`}>
+          <p className="text-d-eyebrow font-semibold uppercase tracking-wider text-ink-500">
+            Recovery
+          </p>
+
+          {/* Big score + SVG arc */}
+          <div className="my-4 flex items-center gap-4">
+            <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
+              <circle cx="32" cy="32" r="26" fill="none" stroke="#e5e7eb" strokeWidth="7" />
+              <circle
+                cx="32" cy="32" r="26"
+                fill="none"
+                stroke={recoveryColor.ring}
+                strokeWidth="7"
+                strokeDasharray={`${(v.recovery_score / 100) * 163.4} 163.4`}
+                strokeLinecap="round"
+                transform="rotate(-90 32 32)"
+              />
+            </svg>
+            <div>
+              <p className={`text-4xl font-bold tabular-nums leading-none ${recoveryColor.text}`}>
+                {v.recovery_score}
+                <span className="ml-0.5 text-lg font-medium">%</span>
+              </p>
+              <p className={`mt-1 text-d-meta font-medium ${recoveryColor.label}`}>
+                {v.recovery_score >= 67 ? "Well recovered" : v.recovery_score >= 34 ? "Moderate" : "Low"}
+              </p>
+            </div>
           </div>
-        ))}
+
+          {/* Sub-metrics */}
+          <dl className="space-y-2 text-d-meta">
+            <div className="flex justify-between">
+              <dt className="text-ink-500">HRV</dt>
+              <dd className="font-semibold tabular-nums text-ink-900">{v.hrv_rmssd_ms} ms</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink-500">Resting HR</dt>
+              <dd className="font-semibold tabular-nums text-ink-900">{v.resting_heart_rate} bpm</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink-500">SpO₂</dt>
+              <dd className="font-semibold tabular-nums text-ink-900">{v.blood_oxygen_percent}%</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink-500">Skin temp</dt>
+              <dd className="font-semibold tabular-nums text-ink-900">{v.skin_temp_celsius} °C</dd>
+            </div>
+          </dl>
+        </div>
+
+        {/* ── Strain ── */}
+        <div className="rounded-xl bg-slate-50 p-5 ring-1 ring-black/5">
+          <p className="text-d-eyebrow font-semibold uppercase tracking-wider text-ink-500">
+            Strain
+          </p>
+
+          {/* Big strain number */}
+          <div className="my-4">
+            <p className={`text-4xl font-bold tabular-nums leading-none ${strainColor}`}>
+              {v.day_strain.toFixed(1)}
+              <span className="ml-1 text-lg font-medium text-ink-400">/ 21</span>
+            </p>
+            <p className="mt-1 text-d-meta font-medium text-ink-500">
+              {v.day_strain < 8 ? "Light day" : v.day_strain < 15 ? "Moderate load" : "High effort"}
+            </p>
+          </div>
+
+          {/* Strain bar */}
+          <div
+            role="meter"
+            aria-valuenow={v.day_strain}
+            aria-valuemin={0}
+            aria-valuemax={21}
+            aria-label={`Day strain: ${v.day_strain.toFixed(1)} out of 21`}
+            className="mb-4 h-3 overflow-hidden rounded-full bg-slate-200"
+          >
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-blue-400 via-green-400 to-orange-400 transition-all duration-700"
+              style={{ width: `${(v.day_strain / 21) * 100}%` }}
+            />
+          </div>
+
+          {/* Sub-metrics */}
+          <dl className="space-y-2 text-d-meta">
+            <div className="flex justify-between">
+              <dt className="text-ink-500">Calories</dt>
+              <dd className="font-semibold tabular-nums text-ink-900">{v.calories_burned.toLocaleString()} kcal</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink-500">Avg HR</dt>
+              <dd className="font-semibold tabular-nums text-ink-900">{v.avg_heart_rate} bpm</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink-500">Max HR</dt>
+              <dd className="font-semibold tabular-nums text-ink-900">{v.max_heart_rate} bpm</dd>
+            </div>
+          </dl>
+        </div>
+
+        {/* ── Sleep ── */}
+        <div className="rounded-xl bg-indigo-50 p-5 ring-1 ring-black/5">
+          <p className="text-d-eyebrow font-semibold uppercase tracking-wider text-ink-500">
+            Sleep
+          </p>
+
+          {/* Performance score */}
+          <div className="my-4">
+            <p className={`text-4xl font-bold tabular-nums leading-none ${sleepColor}`}>
+              {v.sleep_performance_percent}
+              <span className="ml-0.5 text-lg font-medium">%</span>
+            </p>
+            <p className="mt-1 text-d-meta font-medium text-ink-500">
+              {v.sleep_hours.toFixed(1)} h total
+            </p>
+          </div>
+
+          {/* Sleep stage bar */}
+          <div
+            className="mb-1 flex h-3 overflow-hidden rounded-full"
+            role="img"
+            aria-label={`Sleep stages: ${v.time_in_deep_hours.toFixed(1)}h deep, ${v.time_in_rem_hours.toFixed(1)}h REM, ${v.time_in_light_hours.toFixed(1)}h light`}
+          >
+            <div
+              className="bg-indigo-700"
+              style={{ width: `${(v.time_in_deep_hours  / v.sleep_hours) * 100}%` }}
+            />
+            <div
+              className="bg-indigo-400"
+              style={{ width: `${(v.time_in_rem_hours   / v.sleep_hours) * 100}%` }}
+            />
+            <div
+              className="bg-indigo-200"
+              style={{ width: `${(v.time_in_light_hours / v.sleep_hours) * 100}%` }}
+            />
+          </div>
+          {/* Stage legend */}
+          <div className="mb-4 flex gap-3 text-d-meta text-ink-500">
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-sm bg-indigo-700" />
+              Deep {v.time_in_deep_hours.toFixed(1)}h
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-sm bg-indigo-400" />
+              REM {v.time_in_rem_hours.toFixed(1)}h
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-sm bg-indigo-200" />
+              Light {v.time_in_light_hours.toFixed(1)}h
+            </span>
+          </div>
+
+          {/* Sub-metrics */}
+          <dl className="space-y-2 text-d-meta">
+            <div className="flex justify-between">
+              <dt className="text-ink-500">Consistency</dt>
+              <dd className="font-semibold tabular-nums text-ink-900">{v.sleep_consistency_percent}%</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink-500">Resp. rate</dt>
+              <dd className="font-semibold tabular-nums text-ink-900">{v.respiratory_rate.toFixed(1)} brpm</dd>
+            </div>
+          </dl>
+        </div>
       </div>
 
       <p className="mt-5 text-d-meta text-ink-500">
-        Placeholder data — Arjun is not connected to a real device.
+        WHOOP-style metrics are simulated — Arjun is not connected to a real device.
       </p>
     </section>
   );

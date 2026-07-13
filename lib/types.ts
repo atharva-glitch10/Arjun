@@ -48,12 +48,54 @@ export type Conversation = {
   created_at: string;
 };
 
-/** Mocked. Never sourced from a real device (prd.md §2). */
-export type Vitals = {
+/**
+ * WHOOP-style health metrics — simulated, never sourced from a real device (prd.md §2).
+ *
+ * Mirrors WHOOP's three-pillar model: Recovery, Strain, and Sleep.
+ * Displayed with a "WHOOP-style · Simulated" label everywhere it surfaces.
+ */
+export type WhoopVitals = {
+  // ── Recovery (0–100 %) ──────────────────────────────────────────────────
+  /** Overall recovery score: how ready the body is for effort today. */
+  recovery_score: number;
+  /** Heart Rate Variability — RMSSD in ms. Higher = better autonomic balance. */
+  hrv_rmssd_ms: number;
+  /** Resting heart rate in bpm, measured during deepest sleep. */
   resting_heart_rate: number;
+  /** Wrist skin temperature in °C vs. personal baseline. */
+  skin_temp_celsius: number;
+  /** Blood oxygen saturation (SpO2) in %, measured during sleep. */
+  blood_oxygen_percent: number;
+
+  // ── Strain (0–21 WHOOP scale) ───────────────────────────────────────────
+  /** Cardiovascular strain accumulated over the day (0–21). */
+  day_strain: number;
+  /** Estimated active calories burned. */
+  calories_burned: number;
+  /** Average heart rate across the day in bpm. */
+  avg_heart_rate: number;
+  /** Peak heart rate reached during the day in bpm. */
+  max_heart_rate: number;
+
+  // ── Sleep ───────────────────────────────────────────────────────────────
+  /** WHOOP's overall sleep performance score (0–100 %). */
+  sleep_performance_percent: number;
+  /** Total time asleep in hours. */
   sleep_hours: number;
-  steps: number;
+  /** Time spent in REM sleep in hours. */
+  time_in_rem_hours: number;
+  /** Time spent in slow-wave (deep) sleep in hours. */
+  time_in_deep_hours: number;
+  /** Time spent in light sleep in hours. */
+  time_in_light_hours: number;
+  /** Sleep consistency vs. usual schedule (0–100 %). */
+  sleep_consistency_percent: number;
+  /** Average respiratory rate during sleep in breaths per minute. */
+  respiratory_rate: number;
 };
+
+/** Alias kept so existing code referencing `Vitals` compiles without changes. */
+export type Vitals = WhoopVitals;
 
 export type Wellness = {
   id: string;
