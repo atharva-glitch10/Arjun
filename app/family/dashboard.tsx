@@ -462,39 +462,49 @@ function VitalsCard({ snap }: { snap: FamilySnapshot }) {
         </div>
 
         {/* ── Strain ── */}
-        <div className="rounded-xl bg-slate-50 p-5 ring-1 ring-black/5">
-          <p className="text-d-eyebrow font-semibold uppercase tracking-wider text-ink-500">
-            Strain
-          </p>
-
-          {/* Big strain number */}
-          <div className="my-4">
-            <p className={`text-4xl font-bold tabular-nums leading-none ${strainColor}`}>
-              {v.day_strain.toFixed(1)}
-              <span className="ml-1 text-lg font-medium text-ink-400">/ 21</span>
+        <div className="rounded-xl bg-slate-50 p-5 ring-1 ring-black/5 flex flex-col justify-between">
+          <div>
+            <p className="text-d-eyebrow font-semibold uppercase tracking-wider text-ink-500">
+              Strain
             </p>
-            <p className="mt-1 text-d-meta font-medium text-ink-500">
-              {v.day_strain < 8 ? "Light day" : v.day_strain < 15 ? "Moderate load" : "High effort"}
-            </p>
-          </div>
 
-          {/* Strain bar */}
-          <div
-            role="meter"
-            aria-valuenow={v.day_strain}
-            aria-valuemin={0}
-            aria-valuemax={21}
-            aria-label={`Day strain: ${v.day_strain.toFixed(1)} out of 21`}
-            className="mb-4 h-3 overflow-hidden rounded-full bg-slate-200"
-          >
+            {/* Big strain number */}
+            <div className="my-4">
+              <p className={`text-4xl font-bold tabular-nums leading-none ${strainColor}`}>
+                {v.day_strain.toFixed(1)}
+                <span className="ml-1 text-lg font-medium text-ink-400">/ 21</span>
+              </p>
+              <p className="mt-1 text-d-meta font-medium text-ink-500">
+                {v.day_strain < 8 ? "Light day" : v.day_strain < 15 ? "Moderate load" : "High effort"}
+              </p>
+            </div>
+
+            {/* Strain bar */}
             <div
-              className="h-full rounded-full bg-gradient-to-r from-blue-400 via-green-400 to-orange-400 transition-all duration-700"
-              style={{ width: `${(v.day_strain / 21) * 100}%` }}
-            />
+              role="meter"
+              aria-valuenow={v.day_strain}
+              aria-valuemin={0}
+              aria-valuemax={21}
+              aria-label={`Day strain: ${v.day_strain.toFixed(1)} out of 21`}
+              className="mb-4 h-3 overflow-hidden rounded-full bg-slate-200"
+            >
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-400 via-green-400 to-orange-400 transition-all duration-700"
+                style={{ width: `${(v.day_strain / 21) * 100}%` }}
+              />
+            </div>
+
+            {/* Target strain zone */}
+            {v.strain_target_min !== undefined && v.strain_target_max !== undefined && (
+              <div className="mb-4 rounded-lg bg-sand-100/60 p-2.5 text-d-meta text-ink-700 flex justify-between items-center ring-1 ring-black/5">
+                <span className="font-medium text-ink-500">Optimal Zone:</span>
+                <span className="font-semibold tabular-nums text-ink-900">{v.strain_target_min.toFixed(1)} – {v.strain_target_max.toFixed(1)}</span>
+              </div>
+            )}
           </div>
 
           {/* Sub-metrics */}
-          <dl className="space-y-2 text-d-meta">
+          <dl className="space-y-2 text-d-meta border-t border-slate-200/60 pt-3">
             <div className="flex justify-between">
               <dt className="text-ink-500">Calories</dt>
               <dd className="font-semibold tabular-nums text-ink-900">{v.calories_burned.toLocaleString()} kcal</dd>
@@ -511,59 +521,76 @@ function VitalsCard({ snap }: { snap: FamilySnapshot }) {
         </div>
 
         {/* ── Sleep ── */}
-        <div className="rounded-xl bg-indigo-50 p-5 ring-1 ring-black/5">
-          <p className="text-d-eyebrow font-semibold uppercase tracking-wider text-ink-500">
-            Sleep
-          </p>
-
-          {/* Performance score */}
-          <div className="my-4">
-            <p className={`text-4xl font-bold tabular-nums leading-none ${sleepColor}`}>
-              {v.sleep_performance_percent}
-              <span className="ml-0.5 text-lg font-medium">%</span>
+        <div className="rounded-xl bg-indigo-50 p-5 ring-1 ring-black/5 flex flex-col justify-between">
+          <div>
+            <p className="text-d-eyebrow font-semibold uppercase tracking-wider text-ink-500">
+              Sleep
             </p>
-            <p className="mt-1 text-d-meta font-medium text-ink-500">
-              {v.sleep_hours.toFixed(1)} h total
-            </p>
-          </div>
 
-          {/* Sleep stage bar */}
-          <div
-            className="mb-1 flex h-3 overflow-hidden rounded-full"
-            role="img"
-            aria-label={`Sleep stages: ${v.time_in_deep_hours.toFixed(1)}h deep, ${v.time_in_rem_hours.toFixed(1)}h REM, ${v.time_in_light_hours.toFixed(1)}h light`}
-          >
+            {/* Performance score */}
+            <div className="my-4">
+              <p className={`text-4xl font-bold tabular-nums leading-none ${sleepColor}`}>
+                {v.sleep_performance_percent}
+                <span className="ml-0.5 text-lg font-medium">%</span>
+              </p>
+              <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                <p className="text-d-meta font-medium text-ink-500">
+                  {v.sleep_hours.toFixed(1)} h total
+                </p>
+                {v.sleep_need_hours !== undefined && (
+                  <p className="text-[11px] text-ink-400">
+                    of {v.sleep_need_hours.toFixed(1)}h needed
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Sleep debt indicator */}
+            {v.sleep_debt_hours !== undefined && v.sleep_debt_hours > 0 && (
+              <div className="mb-4 rounded-lg bg-warn-100 px-3 py-2 text-d-meta text-warn-800 flex justify-between items-center ring-1 ring-warn-600/10">
+                <span className="font-medium">Sleep Debt:</span>
+                <span className="font-semibold tabular-nums">+{Math.round(v.sleep_debt_hours * 60)} min</span>
+              </div>
+            )}
+
+            {/* Sleep stage bar */}
             <div
-              className="bg-indigo-700"
-              style={{ width: `${(v.time_in_deep_hours  / v.sleep_hours) * 100}%` }}
-            />
-            <div
-              className="bg-indigo-400"
-              style={{ width: `${(v.time_in_rem_hours   / v.sleep_hours) * 100}%` }}
-            />
-            <div
-              className="bg-indigo-200"
-              style={{ width: `${(v.time_in_light_hours / v.sleep_hours) * 100}%` }}
-            />
-          </div>
-          {/* Stage legend */}
-          <div className="mb-4 flex gap-3 text-d-meta text-ink-500">
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-sm bg-indigo-700" />
-              Deep {v.time_in_deep_hours.toFixed(1)}h
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-sm bg-indigo-400" />
-              REM {v.time_in_rem_hours.toFixed(1)}h
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-sm bg-indigo-200" />
-              Light {v.time_in_light_hours.toFixed(1)}h
-            </span>
+              className="mb-1 flex h-3 overflow-hidden rounded-full"
+              role="img"
+              aria-label={`Sleep stages: ${v.time_in_deep_hours.toFixed(1)}h deep, ${v.time_in_rem_hours.toFixed(1)}h REM, ${v.time_in_light_hours.toFixed(1)}h light`}
+            >
+              <div
+                className="bg-indigo-700"
+                style={{ width: `${(v.time_in_deep_hours  / v.sleep_hours) * 100}%` }}
+              />
+              <div
+                className="bg-indigo-400"
+                style={{ width: `${(v.time_in_rem_hours   / v.sleep_hours) * 100}%` }}
+              />
+              <div
+                className="bg-indigo-200"
+                style={{ width: `${(v.time_in_light_hours / v.sleep_hours) * 100}%` }}
+              />
+            </div>
+            {/* Stage legend */}
+            <div className="mb-4 flex flex-wrap gap-2 text-[11px] text-ink-500">
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-sm bg-indigo-700" />
+                Deep {v.time_in_deep_hours.toFixed(1)}h
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-sm bg-indigo-400" />
+                REM {v.time_in_rem_hours.toFixed(1)}h
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block h-2 w-2 rounded-sm bg-indigo-200" />
+                Light {v.time_in_light_hours.toFixed(1)}h
+              </span>
+            </div>
           </div>
 
           {/* Sub-metrics */}
-          <dl className="space-y-2 text-d-meta">
+          <dl className="space-y-2 text-d-meta border-t border-indigo-200/50 pt-3">
             <div className="flex justify-between">
               <dt className="text-ink-500">Consistency</dt>
               <dd className="font-semibold tabular-nums text-ink-900">{v.sleep_consistency_percent}%</dd>
@@ -572,9 +599,55 @@ function VitalsCard({ snap }: { snap: FamilySnapshot }) {
               <dt className="text-ink-500">Resp. rate</dt>
               <dd className="font-semibold tabular-nums text-ink-900">{v.respiratory_rate.toFixed(1)} brpm</dd>
             </div>
+            {v.sleep_disturbances !== undefined && (
+              <div className="flex justify-between">
+                <dt className="text-ink-500">Disturbances</dt>
+                <dd className="font-semibold tabular-nums text-ink-900">{v.sleep_disturbances} wake ups</dd>
+              </div>
+            )}
           </dl>
         </div>
       </div>
+
+      {/* Logged Activities / Workouts (New section spanning bottom of card) */}
+      {v.activities && v.activities.length > 0 && (
+        <div className="mt-6 border-t border-dashed border-sand-300 pt-5">
+          <h3 className="text-d-eyebrow font-semibold uppercase tracking-wider text-ink-700 mb-3">
+            Logged Activities Today
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {v.activities.map((act, i) => (
+              <div key={i} className="flex justify-between items-center bg-surface-card rounded-xl p-4 ring-1 ring-black/5 shadow-2xs hover:shadow-xs transition duration-150">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-clay-100 p-2.5 text-clay-700">
+                    {act.name.toLowerCase().includes("walk") ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="4" r="2"/><path d="M12 12a3 3 0 0 0-3-3H7.8a2 2 0 0 0-1.8 1.1L4 14.5M10.5 15l1.5 5h3l1.5-6.5M14 9l1 3M10 12l2.5 3.5"/></svg>
+                    ) : act.name.toLowerCase().includes("garden") ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M7 20h10"/><path d="M10 20V12"/><path d="M12 17V12"/><path d="M14 20v-5"/><path d="M19 9a7 7 0 0 0-7-7 7 7 0 0 0-7 7M5 9c0 4 3 7 7 7s7-3 7-7"/></svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-ink-900 text-d-body">{act.name}</p>
+                    <p className="text-ink-500 text-d-meta">{act.duration_minutes} mins · {act.calories} kcal</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-[11px] uppercase tracking-wider text-ink-400 font-semibold">Avg HR</p>
+                    <p className="font-bold text-ink-900 text-d-body tabular-nums">{act.avg_hr} <span className="text-[10px] font-normal text-ink-500">bpm</span></p>
+                  </div>
+                  <div className="border-l border-sand-200 pl-4 text-center">
+                    <p className="text-[11px] uppercase tracking-wider text-ink-400 font-semibold">Strain</p>
+                    <p className="font-extrabold text-orange-600 text-d-lead tabular-nums">{act.strain.toFixed(1)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <p className="mt-5 text-d-meta text-ink-500">
         WHOOP-style metrics are simulated — Arjun is not connected to a real device.

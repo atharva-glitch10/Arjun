@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { mockVitals } from "../lib/agent/wellness";
 
 // Run via: npx tsx scripts/seed-demo.ts <elder_id>
 
@@ -111,7 +112,7 @@ async function main() {
       energy: scores[i] + 5,
       loneliness: 100 - scores[i],
       concern: 20,
-      vitals: { resting_heart_rate: 68, sleep_hours: 7.5, steps: 4200 },
+      vitals: mockVitals(scores[i] + 5),
       created_at: dates[i],
     });
   }

@@ -92,6 +92,26 @@ export type WhoopVitals = {
   sleep_consistency_percent: number;
   /** Average respiratory rate during sleep in breaths per minute. */
   respiratory_rate: number;
+
+  // ── Extra Details for Demo ────────────────────────────────────────────────
+  /** Daily sleep need in hours. */
+  sleep_need_hours: number;
+  /** Accumulated sleep debt in hours. */
+  sleep_debt_hours: number;
+  /** Number of sleep disturbances / wake events. */
+  sleep_disturbances: number;
+  /** Optimal day strain target lower bound (0-21). */
+  strain_target_min: number;
+  /** Optimal day strain target upper bound (0-21). */
+  strain_target_max: number;
+  /** List of detected activities / workouts for the day. */
+  activities?: {
+    name: string;
+    duration_minutes: number;
+    strain: number;
+    avg_hr: number;
+    calories: number;
+  }[];
 };
 
 /** Alias kept so existing code referencing `Vitals` compiles without changes. */

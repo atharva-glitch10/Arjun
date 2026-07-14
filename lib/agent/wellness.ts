@@ -71,6 +71,51 @@ export function mockVitals(energy: number): WhoopVitals {
   // Respiratory rate during sleep: normal 12–20 breaths/min
   const respiratory_rate = clampF(14 + jitter(2.5), 11, 20);
 
+  // ── Extra Details for Demo ────────────────────────────────────────────────
+  const sleep_need_hours = clampF(7.2 + jitter(0.5), 6.5, 9.0);
+  const sleep_debt_hours = clampF(1.8 - e * 1.5 + jitter(0.3), 0.0, 3.0);
+  const sleep_disturbances = Math.max(1, Math.round(4 - e * 2 + (Math.random() - 0.5) * 2));
+
+  // Target strain correlates with recovery
+  const target_mid = 3.0 + (recovery_score / 100) * 11.0;
+  const strain_target_min = clampF(target_mid - 2.0 + jitter(0.5), 1.0, 18.0);
+  const strain_target_max = clampF(target_mid + 2.0 + jitter(0.5), strain_target_min + 1.0, 21.0);
+
+  // Dynamic mock activities based on energy
+  const activities: WhoopVitals["activities"] = [];
+  if (energy >= 70) {
+    activities.push({
+      name: "Morning Walk",
+      duration_minutes: Math.round(35 + (Math.random() - 0.5) * 10),
+      strain: clampF(5.5 + jitter(1.0), 3.0, 9.0),
+      avg_hr: Math.round(98 + (Math.random() - 0.5) * 10),
+      calories: Math.round(160 + (Math.random() - 0.5) * 40),
+    });
+    activities.push({
+      name: "Gardening",
+      duration_minutes: Math.round(45 + (Math.random() - 0.5) * 15),
+      strain: clampF(3.8 + jitter(0.8), 2.0, 6.0),
+      avg_hr: Math.round(86 + (Math.random() - 0.5) * 8),
+      calories: Math.round(130 + (Math.random() - 0.5) * 30),
+    });
+  } else if (energy >= 45) {
+    activities.push({
+      name: "Morning Walk",
+      duration_minutes: Math.round(25 + (Math.random() - 0.5) * 8),
+      strain: clampF(4.2 + jitter(0.8), 2.5, 7.0),
+      avg_hr: Math.round(92 + (Math.random() - 0.5) * 8),
+      calories: Math.round(110 + (Math.random() - 0.5) * 25),
+    });
+  } else {
+    activities.push({
+      name: "Light Stretching",
+      duration_minutes: Math.round(15 + (Math.random() - 0.5) * 4),
+      strain: clampF(1.8 + jitter(0.5), 1.0, 3.5),
+      avg_hr: Math.round(78 + (Math.random() - 0.5) * 6),
+      calories: Math.round(45 + (Math.random() - 0.5) * 10),
+    });
+  }
+
   return {
     // Recovery
     recovery_score,
@@ -91,6 +136,13 @@ export function mockVitals(energy: number): WhoopVitals {
     time_in_light_hours,
     sleep_consistency_percent,
     respiratory_rate,
+    // Extra Details for Demo
+    sleep_need_hours,
+    sleep_debt_hours,
+    sleep_disturbances,
+    strain_target_min,
+    strain_target_max,
+    activities,
   };
 }
 
