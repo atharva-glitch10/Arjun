@@ -129,6 +129,7 @@ export type Wellness = {
   vitals: Vitals | null;
   score: number;
   recommendation: string;
+  crisis_detected: boolean;
   created_at: string;
 };
 
@@ -141,6 +142,7 @@ export type ConversationAnalysis = {
   loneliness: number;
   concern: number;
   recommendation: string;
+  crisis_detected: boolean;
 };
 
 /** Everything loaded into the system prompt to make the agent remember. */

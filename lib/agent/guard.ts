@@ -36,9 +36,23 @@ const SUBSTITUTIONS: [RegExp, string][] = [
   [/\bparanoid\b/gi, "worried"],
 ];
 
+const CRISIS_KEYWORDS = [
+  /\b(suicide|kill myself|end it all|want to die)\b/i,
+  /\b(chest pain|heart attack|can't breathe|ambulance|emergency|hospital)\b/i,
+  /\b(hurt myself|self harm)\b/i,
+  /\b(someone is hurting me|hit me|scared of them|abuse)\b/i,
+];
+
 /** True if the text still reads clinically. Used by tests and by scrubClinical's warning. */
 export function containsClinicalLanguage(text: string): boolean {
   return SUBSTITUTIONS.some(([pattern]) => {
+    pattern.lastIndex = 0;
+    return pattern.test(text);
+  });
+}
+
+export function hasCrisisKeywords(text: string): boolean {
+  return CRISIS_KEYWORDS.some((pattern) => {
     pattern.lastIndex = 0;
     return pattern.test(text);
   });

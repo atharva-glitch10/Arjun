@@ -14,14 +14,15 @@ export type FamilySnapshot = {
   sharing: boolean;
   latest: {
     at: string;
-    mood: string;
-    energy: number;
-    loneliness: number;
-    concern: number;
-    score: number;
-    recommendation: string;
+    mood: string | null;
+    energy: number | null;
+    loneliness: number | null;
+    concern: number | null;
+    score: number | null;
+    recommendation: string | null;
     vitals: Vitals | null;
     summary: string | null;
+    crisis_detected: boolean;
   } | null;
   trend: TrendPoint[];
   conversationCount: number;
@@ -46,15 +47,7 @@ export async function getFamilySnapshot(elderId: string): Promise<FamilySnapshot
 
   if (error || !elder) throw new Error("Elder not found");
 
-  if (!elder.share_enabled) {
-    return {
-      elder,
-      sharing: false,
-      latest: null,
-      trend: [],
-      conversationCount: 0,
-    };
-  }
+
 
   const [wellnessRes, convoRes, countRes] = await Promise.all([
     db
@@ -81,6 +74,39 @@ export async function getFamilySnapshot(elderId: string): Promise<FamilySnapshot
   const rows = wellnessRes.data ?? [];
   const newest = rows[0];
 
+  if (!elder.share_enabled) {
+    if (newest && newest.crisis_detected) {
+      // Safety overrides consent policy:
+      // Return a partial snapshot with the crisis warning, hiding all other private details.
+      return {
+        elder,
+        sharing: false,
+        latest: {
+          at: newest.created_at,
+          mood: null,
+          energy: null,
+          loneliness: null,
+          concern: null,
+          score: null,
+          recommendation: newest.recommendation,
+          vitals: null,
+          summary: null,
+          crisis_detected: true,
+        },
+        trend: [],
+        conversationCount: 0,
+      };
+    }
+    
+    return {
+      elder,
+      sharing: false,
+      latest: null,
+      trend: [],
+      conversationCount: 0,
+    };
+  }
+
   return {
     elder,
     sharing: true,
@@ -95,6 +121,7 @@ export async function getFamilySnapshot(elderId: string): Promise<FamilySnapshot
           recommendation: newest.recommendation,
           vitals: newest.vitals,
           summary: convoRes.data?.summary ?? null,
+          crisis_detected: newest.crisis_detected,
         }
       : null,
     trend: rows

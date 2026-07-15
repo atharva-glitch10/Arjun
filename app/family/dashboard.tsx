@@ -105,6 +105,10 @@ export default function Dashboard({
       <main className="mx-auto max-w-3xl space-y-6 px-5 py-8">
         {pending && <NewNoteBanner onRead={acceptUpdate} name={name} />}
 
+        {snap.latest?.crisis_detected && (
+          <CrisisCard recommendation={snap.latest.recommendation!} name={name} />
+        )}
+
         {!snap.sharing ? (
           <SharingPaused name={name} viewerRole={viewerRole} />
         ) : !snap.latest ? (
@@ -112,7 +116,9 @@ export default function Dashboard({
         ) : (
           <>
             <TodayCard snap={snap} name={name} headingRef={headingRef} />
-            <RecommendationCard text={snap.latest.recommendation} name={name} />
+            {!snap.latest.crisis_detected && (
+              <RecommendationCard text={snap.latest.recommendation!} name={name} />
+            )}
             <SignalsCard snap={snap} />
             {snap.trend.length > 1 && <TrendCard trend={snap.trend} />}
             <VitalsCard snap={snap} />
@@ -259,6 +265,29 @@ function RecommendationCard({ text, name }: { text: string; name: string }) {
       <p className="mt-4 text-d-meta text-ink-700">
         {`Arjun keeps ${name} company. It doesn’t replace you.`}
       </p>
+    </section>
+  );
+}
+
+function CrisisCard({ recommendation, name }: { recommendation: string; name: string }) {
+  return (
+    <section className="animate-rise rounded-card bg-red-600 p-7 shadow-lg ring-1 ring-red-700/50">
+      <div className="flex items-start gap-4 text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div>
+          <h2 className="text-d-title font-bold uppercase tracking-wide">
+            Immediate Attention Needed
+          </h2>
+          <p className="mt-3 text-lg font-medium">
+            {recommendation}
+          </p>
+          <p className="mt-4 text-red-200 text-d-meta font-medium">
+            Arjun detected signals of a potential crisis (e.g. medical emergency, severe distress, or self-harm) in {name}&apos;s last conversation. Please contact them or emergency services immediately.
+          </p>
+        </div>
+      </div>
     </section>
   );
 }

@@ -25,6 +25,7 @@ const analysisSchema = z.object({
   loneliness: z.number().int().min(0).max(100),
   concern: z.number().int().min(0).max(100),
   recommendation: z.string().min(1),
+  crisis_detected: z.boolean(),
 });
 
 /** Hand-written because json_schema strict mode is fussier than zod-to-json-schema output. */
@@ -39,6 +40,7 @@ const ANALYSIS_JSON_SCHEMA = {
     "loneliness",
     "concern",
     "recommendation",
+    "crisis_detected"
   ],
   properties: {
     facts: {
@@ -70,6 +72,10 @@ const ANALYSIS_JSON_SCHEMA = {
       type: "string",
       description: "one sentence; a small human action for the family, toward human contact",
     },
+    crisis_detected: {
+      type: "boolean",
+      description: "true if the conversation contains concerning signals such as abuse, self-harm, medical emergencies, severe chest pain, or uncharacteristic extreme distress",
+    },
   },
 } as const;
 
@@ -94,6 +100,7 @@ export async function analyzeConversation(
       loneliness: 50,
       concern: 50,
       recommendation: "Nothing specific to recommend today; perhaps just a quick hello later.",
+      crisis_detected: false,
     };
   }
 

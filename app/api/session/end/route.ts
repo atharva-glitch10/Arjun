@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { loadElderContext, saveFacts } from "@/lib/agent/memory";
 import { analyzeConversation } from "@/lib/agent/analyze";
 import { mockVitals, wellnessScore } from "@/lib/agent/wellness";
-import { scrubClinical } from "@/lib/agent/guard";
+import { scrubClinical, hasCrisisKeywords } from "@/lib/agent/guard";
 import { elderChannel, SESSION_ENDED } from "@/lib/realtime";
 import type { ChatMessage } from "@/lib/types";
 
@@ -63,6 +63,10 @@ export async function POST(req: Request) {
   const recommendation = scrubClinical(analysis.recommendation);
   const mood = scrubClinical(analysis.mood);
 
+  // Hybrid crisis detection: LLM flag OR deterministic regex on user's messages
+  const userText = transcript.filter(m => m.role === "user").map(m => m.content).join(" ");
+  const crisis_detected = analysis.crisis_detected || hasCrisisKeywords(userText);
+
   // 1. Memory first. If this fails, the session is worthless — fail loudly.
   const factCount = await saveFacts(elderId, analysis.facts);
 
@@ -94,6 +98,7 @@ export async function POST(req: Request) {
     vitals,
     score,
     recommendation,
+    crisis_detected,
   });
 
   if (wellnessErr) {
@@ -111,7 +116,7 @@ export async function POST(req: Request) {
     await db.channel(elderChannel(elderId)).send({
       type: "broadcast",
       event: SESSION_ENDED,
-      payload: { at: new Date().toISOString() },
+      payload: { at: new Date().toISOString(), crisis: crisis_detected },
     });
   } catch (err) {
     console.warn("[session/end] broadcast failed; dashboard will pick it up by polling", err);
