@@ -1,5 +1,4 @@
 import "server-only";
-import { supabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { Elder, Role } from "@/lib/types";
 
@@ -10,46 +9,48 @@ export type Session = {
   elder: Elder;
 };
 
-/** The signed-in user, resolved to a role and an elder. Null if not signed in. */
+/** The mock signed-in user, which forces the app to use a single default elder. */
 export async function getSession(): Promise<Session | null> {
-  const sb = await supabaseServer();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  if (!user) return null;
-
   const db = supabaseAdmin();
-  const { data: profile } = await db
-    .from("profiles")
-    .select("role, elder_id")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile?.elder_id) return null; // signed in, but not onboarded yet
-
-  const { data: elder } = await db
+  
+  // Try to find the first elder
+  let { data: elder } = await db
     .from("elders")
     .select("*")
-    .eq("id", profile.elder_id)
+    .limit(1)
     .maybeSingle();
 
-  if (!elder) return null;
+  // If no elder exists, create a default one
+  if (!elder) {
+    const { data: newElder, error } = await db
+      .from("elders")
+      .insert({
+        name: "Test Elder",
+        native_language: "English",
+        share_enabled: true,
+        share_code: generateShareCode(),
+      })
+      .select("*")
+      .single();
+      
+    if (error) {
+      console.error("Failed to create default elder:", error);
+      return null;
+    }
+    elder = newElder;
+  }
 
   return {
-    userId: user.id,
-    email: user.email ?? null,
-    role: profile.role as Role,
+    userId: "mock-user-id",
+    email: "mock@example.com",
+    role: "elder",
     elder: elder as Elder,
   };
 }
 
-/** Just the auth user — used by onboarding, which runs *before* a profile exists. */
+/** Just the mock auth user */
 export async function getUser() {
-  const sb = await supabaseServer();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  return user;
+  return { id: "mock-user-id", email: "mock@example.com" };
 }
 
 /** Unambiguous characters only — this gets read aloud over the phone. */

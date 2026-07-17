@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { signOut } from "@/app/actions";
+import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { elderChannel, SESSION_ENDED } from "@/lib/realtime";
 import { scoreBand } from "@/lib/agent/wellness";
@@ -95,9 +95,9 @@ export default function Dashboard({
               <span className="h-2 w-2 rounded-full bg-sage-600" aria-hidden="true" />
               Live
             </span>
-            <form action={signOut}>
-              <button className="text-d-body text-ink-700 hover:text-ink-900">Sign out</button>
-            </form>
+            <Link href="/companion" className="text-d-body text-ink-700 hover:text-ink-900">
+              Open Companion
+            </Link>
           </div>
         </div>
       </header>

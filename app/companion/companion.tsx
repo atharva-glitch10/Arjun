@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "@/app/actions";
+import Link from "next/link";
+import { updateElderLanguage } from "@/app/actions";
 import type { ChatMessage } from "@/lib/types";
 import MemoryPanel from "./memory-panel";
 
@@ -31,18 +32,21 @@ const LANG_MAP: Record<string, string> = {
 };
 
 export default function Companion({
+  elderId,
   elderName,
   nativeLanguage,
   shareCode,
   shareEnabled,
   facts,
 }: {
+  elderId: string;
   elderName: string;
   nativeLanguage: string;
   shareCode: string;
   shareEnabled: boolean;
   facts: Fact[];
 }) {
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -268,7 +272,7 @@ export default function Companion({
       <SessionClosed
         result={result}
         shareEnabled={shareEnabled}
-        onAgain={() => router.refresh()}
+        onAgain={() => window.location.reload()}
       />
     );
   }
@@ -279,15 +283,32 @@ export default function Companion({
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-4">
           <div>
             <p className="text-d-eyebrow font-medium uppercase text-clay-700">Arjun</p>
-            <p className="text-e-meta text-ink-700">Good to see you, {elderName}.</p>
+            <div className="flex items-center gap-2">
+              <p className="text-e-meta text-ink-700">Good to see you, {elderName}.</p>
+              <select
+                value={nativeLanguage}
+                disabled={isPending}
+                onChange={(e) => {
+                  startTransition(async () => {
+                    await updateElderLanguage(elderId, e.target.value);
+                    window.location.reload();
+                  });
+                }}
+                className="ml-2 rounded border border-sand-300 bg-surface-card px-2 py-0.5 text-xs text-ink-700 focus:outline-none focus:ring-1 focus:ring-clay-500"
+              >
+                {Object.keys(LANG_MAP).map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <MemoryPanel facts={facts} shareCode={shareCode} shareEnabled={shareEnabled} />
-            <form action={signOut}>
-              <button className="rounded-control px-3 py-2 text-e-meta text-ink-700 hover:text-ink-900">
-                Sign out
-              </button>
-            </form>
+            <Link href="/family" className="rounded-control px-3 py-2 text-e-meta text-ink-700 hover:text-ink-900">
+              View Dashboard
+            </Link>
           </div>
         </div>
       </header>

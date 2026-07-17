@@ -7,8 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function CompanionPage() {
   const session = await getSession();
-  if (!session) redirect("/login");
-  if (session.role !== "elder") redirect("/family");
+  if (!session) redirect("/");
 
   // Only used to show the elder what Arjun remembers — the agent loads its own context
   // server-side on every turn.
@@ -16,6 +15,7 @@ export default async function CompanionPage() {
 
   return (
     <Companion
+      elderId={session.elder.id}
       elderName={session.elder.name ?? "friend"}
       nativeLanguage={session.elder.native_language ?? "English"}
       shareCode={session.elder.share_code ?? ""}
