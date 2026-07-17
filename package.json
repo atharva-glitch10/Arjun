@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "check:llm": "node --conditions=react-server --env-file=.env.local --import tsx scripts/check-llm.ts",
-    "verify:recall": "node --conditions=react-server --env-file=.env.local --import tsx scripts/verify-recall.ts"
+    "verify:recall": "node --conditions=react-server --env-file=.env.local --import tsx scripts/verify-recall.ts",
+    "setup:dev-users": "node --conditions=react-server --env-file=.env.local --import tsx scripts/setup-dev-users.ts",
+    "seed:demo": "node --conditions=react-server --env-file=.env.local --import tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",

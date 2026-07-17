@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FamilyPage() {
   const session = await getSession();
-  if (!session) redirect("/");
+  if (!session) redirect("/login");
 
   const snapshot = await getFamilySnapshot(session.elder.id);
 

@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { updateElderLanguage } from "@/app/actions";
+import { updateElderLanguage, signOutAction } from "@/app/actions";
 import type { ChatMessage } from "@/lib/types";
 import MemoryPanel from "./memory-panel";
 
@@ -306,9 +305,11 @@ export default function Companion({
           </div>
           <div className="flex items-center gap-3">
             <MemoryPanel facts={facts} shareCode={shareCode} shareEnabled={shareEnabled} />
-            <Link href="/family" className="rounded-control px-3 py-2 text-e-meta text-ink-700 hover:text-ink-900">
-              View Dashboard
-            </Link>
+            <form action={signOutAction}>
+              <button className="rounded-control px-3 py-2 text-e-meta text-ink-700 hover:text-ink-900">
+                Sign out
+              </button>
+            </form>
           </div>
         </div>
       </header>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { signOutAction } from "@/app/actions";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { elderChannel, SESSION_ENDED } from "@/lib/realtime";
 import { scoreBand } from "@/lib/agent/wellness";
@@ -28,12 +29,17 @@ export default function Dashboard({
    * surveillance feed that refreshes itself. We are building the first one.
    */
   const [pending, setPending] = useState<FamilySnapshot | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   const refetch = useCallback(async () => {
     try {
       const res = await fetch("/api/family/snapshot", { cache: "no-store" });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setError("Could not load the latest updates. We'll keep trying.");
+        return;
+      }
+      setError(null);
       const next: FamilySnapshot = await res.json();
 
       setSnap((prev) => {
@@ -95,14 +101,19 @@ export default function Dashboard({
               <span className="h-2 w-2 rounded-full bg-sage-600" aria-hidden="true" />
               Live
             </span>
-            <Link href="/companion" className="text-d-body text-ink-700 hover:text-ink-900">
-              Open Companion
-            </Link>
+            <form action={signOutAction}>
+              <button className="text-d-body text-ink-700 hover:text-ink-900">Sign out</button>
+            </form>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl space-y-6 px-5 py-8">
+        {error && (
+          <div className="rounded-card bg-red-50 p-4 ring-1 ring-red-200">
+            <p className="text-d-body text-red-700">{error}</p>
+          </div>
+        )}
         {pending && <NewNoteBanner onRead={acceptUpdate} name={name} />}
 
         {snap.latest?.crisis_detected && (
@@ -122,10 +133,32 @@ export default function Dashboard({
             <SignalsCard snap={snap} />
             {snap.trend.length > 1 && <TrendCard trend={snap.trend} />}
             <VitalsCard snap={snap} />
+            <HealthNotesCard healthFacts={snap.healthFacts} />
           </>
         )}
       </main>
     </div>
+  );
+}
+
+function HealthNotesCard({ healthFacts }: { healthFacts: { key: string; value: string }[] }) {
+  if (healthFacts.length === 0) return null;
+
+  return (
+    <section className="animate-rise rounded-card bg-surface-card p-7 shadow-sm ring-1 ring-sand-200">
+      <h2 className="text-d-eyebrow font-medium uppercase text-clay-700">Health &amp; Medications</h2>
+      <ul className="mt-5 space-y-4">
+        {healthFacts.map((fact) => (
+          <li key={fact.key} className="text-d-lead text-ink-900 flex items-start gap-4 border-b border-sand-100 pb-4 last:border-0">
+            <span className="mt-2 h-2 w-2 rounded-full bg-clay-500 flex-shrink-0" />
+            {fact.value}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-5 text-d-meta text-ink-500">
+        These are notes extracted naturally from conversation. They are not medical diagnoses or verified charts.
+      </p>
+    </section>
   );
 }
 
@@ -370,13 +403,18 @@ function TrendCard({ trend }: { trend: FamilySnapshot["trend"] }) {
         />
         {pts.map((p, i) => {
           const [x, y] = p.split(",");
+          const isLast = i === pts.length - 1;
+          const radius = isLast ? 5 : pts.length > 30 ? 0 : 3;
+          
+          if (radius === 0) return null;
+
           return (
             <circle
               key={i}
               cx={x}
               cy={y}
-              r={i === pts.length - 1 ? 5 : 3}
-              fill={i === pts.length - 1 ? "var(--color-clay-500)" : "var(--color-sand-300)"}
+              r={radius}
+              fill={isLast ? "var(--color-clay-500)" : "var(--color-sand-300)"}
             />
           );
         })}

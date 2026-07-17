@@ -14,6 +14,8 @@ export function llm() {
   return new OpenAI({
     apiKey,
     baseURL: process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1",
+    timeout: 20_000,
+    maxRetries: 1,
   });
 }
 

@@ -25,6 +25,7 @@ export type FamilySnapshot = {
     crisis_detected: boolean;
   } | null;
   trend: TrendPoint[];
+  healthFacts: { key: string; value: string }[];
   conversationCount: number;
 };
 
@@ -49,13 +50,13 @@ export async function getFamilySnapshot(elderId: string): Promise<FamilySnapshot
 
 
 
-  const [wellnessRes, convoRes, countRes] = await Promise.all([
+  const [wellnessRes, convoRes, countRes, factsRes] = await Promise.all([
     db
       .from("wellness")
       .select("*")
       .eq("elder_id", elderId)
       .order("created_at", { ascending: false })
-      .limit(14),
+      .limit(180),
     // NOTE: `summary` only. Never `transcript`.
     db
       .from("conversations")
@@ -69,6 +70,11 @@ export async function getFamilySnapshot(elderId: string): Promise<FamilySnapshot
       .from("conversations")
       .select("id", { count: "exact", head: true })
       .eq("elder_id", elderId),
+    db
+      .from("facts")
+      .select("key, value")
+      .eq("elder_id", elderId)
+      .eq("category", "health"),
   ]);
 
   const rows = wellnessRes.data ?? [];
@@ -94,6 +100,7 @@ export async function getFamilySnapshot(elderId: string): Promise<FamilySnapshot
           crisis_detected: true,
         },
         trend: [],
+        healthFacts: [],
         conversationCount: 0,
       };
     }
@@ -103,6 +110,7 @@ export async function getFamilySnapshot(elderId: string): Promise<FamilySnapshot
       sharing: false,
       latest: null,
       trend: [],
+      healthFacts: [],
       conversationCount: 0,
     };
   }
@@ -128,6 +136,7 @@ export async function getFamilySnapshot(elderId: string): Promise<FamilySnapshot
       .slice()
       .reverse()
       .map((w) => ({ at: w.created_at, score: w.score, mood: w.mood })),
+    healthFacts: factsRes.data ?? [],
     conversationCount: countRes.count ?? 0,
   };
 }
